@@ -331,7 +331,6 @@ body {
   gap: 0.875rem;
   padding: 0.875rem;
   position: relative;
-  overflow: hidden;
 }
 .book-cover {
   width: 80px;
@@ -596,6 +595,7 @@ body {
   .results-grid { grid-template-columns: 1fr 1fr; }
   .book-card {
     grid-template-columns: 1fr;
+    overflow: hidden;
   }
   .book-card .book-cover,
   .book-card .book-cover-placeholder {
