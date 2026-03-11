@@ -442,8 +442,11 @@
         showToast('Wrong code — try again.');
         document.getElementById('mfa-enroll-code').value = '';
       } else {
-        const fid = _enrollFactorId;
-        cancelEnroll();
+        // Clear ID first so cancelEnroll won't unenroll the now-verified factor
+        _enrollFactorId = null;
+        document.getElementById('mfa-enroll-area').style.display = 'none';
+        document.getElementById('mfa-enroll-code').value         = '';
+        document.getElementById('mfa-toggle-btn').style.display  = '';
         await refreshMfaStatus();
         showToast('MFA enabled! 🔐');
       }
