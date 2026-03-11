@@ -10,7 +10,6 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="stylesheet" href="css/style.css">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body class="app-page">
 
@@ -144,14 +143,26 @@
   <div id="scanner-modal" class="modal-overlay" onclick="if(event.target===this)closeScanner()">
     <div class="scanner-sheet">
       <div class="scanner-header">
-        <span class="scanner-title">Scan Book Barcode</span>
+        <span class="scanner-title">Scan Barcode</span>
         <button class="scanner-close" onclick="closeScanner()">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <p class="scanner-hint">Point your camera at the barcode on the back of the book</p>
-      <div id="scanner-preview" class="scanner-preview"></div>
-      <p id="scanner-status" class="scanner-status"></p>
+      <!-- Camera view (Chrome/Android) -->
+      <div id="scanner-camera-area" style="display:none">
+        <div id="scanner-preview" class="scanner-preview">
+          <div class="scanner-reticle"></div>
+        </div>
+        <p id="scanner-status" class="scanner-status">Point camera at the barcode on the back of the book</p>
+      </div>
+      <!-- Manual ISBN fallback (iOS Safari) -->
+      <div id="scanner-manual-area" style="display:none">
+        <p class="scanner-hint">Your browser doesn't support camera scanning.<br>Enter the ISBN from the back of the book:</p>
+        <div class="scanner-manual-row">
+          <input type="number" id="scanner-isbn-input" class="scanner-isbn-input" placeholder="9781234567890" inputmode="numeric">
+          <button class="scanner-isbn-btn" onclick="submitManualISBN()">Search</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -733,25 +744,57 @@
     }
 
     // ── Barcode scanner ────────────────────────────────────────────────────
-    let _scanner = null;
+    let _scanStream = null;
+    let _scanAnimFrame = null;
 
     async function openScanner() {
       document.getElementById('scanner-modal').classList.add('open');
-      document.getElementById('scanner-status').textContent = 'Starting camera…';
+
+      const hasDetector = 'BarcodeDetector' in window;
+      if (!hasDetector) {
+        // iOS Safari fallback — manual ISBN entry
+        document.getElementById('scanner-manual-area').style.display = 'block';
+        document.getElementById('scanner-camera-area').style.display = 'none';
+        setTimeout(() => document.getElementById('scanner-isbn-input').focus(), 100);
+        return;
+      }
+
+      document.getElementById('scanner-camera-area').style.display = 'block';
+      document.getElementById('scanner-manual-area').style.display = 'none';
+
       try {
-        _scanner = new Html5Qrcode('scanner-preview');
-        await _scanner.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 260, height: 100 } },
-          (isbn) => {
-            closeScanner();
-            document.getElementById('search-input').value = isbn;
-            switchView('search');
-            doSearch();
-          },
-          () => {} // per-frame errors are normal, ignore
-        );
-        document.getElementById('scanner-status').textContent = 'Align the barcode within the box';
+        _scanStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+
+        const video = document.createElement('video');
+        video.srcObject = _scanStream;
+        video.setAttribute('playsinline', '');
+        video.muted = true;
+
+        const preview = document.getElementById('scanner-preview');
+        // Insert video behind the reticle overlay
+        preview.insertBefore(video, preview.firstChild);
+        await video.play();
+
+        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39'] });
+
+        async function scanFrame() {
+          if (!_scanStream) return;
+          try {
+            const barcodes = await detector.detect(video);
+            if (barcodes.length > 0) {
+              const isbn = barcodes[0].rawValue;
+              closeScanner();
+              document.getElementById('search-input').value = isbn;
+              doSearch();
+              return;
+            }
+          } catch (_) {}
+          _scanAnimFrame = requestAnimationFrame(scanFrame);
+        }
+        _scanAnimFrame = requestAnimationFrame(scanFrame);
+
       } catch (err) {
         document.getElementById('scanner-status').textContent =
           'Camera unavailable — please allow camera access and try again.';
@@ -760,10 +803,24 @@
 
     function closeScanner() {
       document.getElementById('scanner-modal').classList.remove('open');
-      if (_scanner) {
-        _scanner.stop().catch(() => {});
-        _scanner = null;
-      }
+      if (_scanAnimFrame) { cancelAnimationFrame(_scanAnimFrame); _scanAnimFrame = null; }
+      if (_scanStream)    { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
+      // Clean up video element
+      const preview = document.getElementById('scanner-preview');
+      const video = preview.querySelector('video');
+      if (video) video.remove();
+      // Hide both areas for next open
+      document.getElementById('scanner-camera-area').style.display = 'none';
+      document.getElementById('scanner-manual-area').style.display = 'none';
+      document.getElementById('scanner-isbn-input').value = '';
+    }
+
+    function submitManualISBN() {
+      const isbn = document.getElementById('scanner-isbn-input').value.trim();
+      if (!isbn) return;
+      closeScanner();
+      document.getElementById('search-input').value = isbn;
+      doSearch();
     }
 
     // ── Family view ────────────────────────────────────────────────────────
