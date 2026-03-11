@@ -36,6 +36,10 @@
       </div>
     </div>
     <div style="padding:1rem">
+      <div id="recent-section">
+        <div class="section-label">Recently Added</div>
+        <div id="recent-books" class="recent-scroll"></div>
+      </div>
       <div id="search-results" class="results-grid"></div>
     </div>
   </div>
@@ -267,7 +271,10 @@
   </div>
 
   <!-- Toast -->
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast">
+    <span id="toast-msg"></span>
+    <button id="toast-undo" style="display:none" onclick="undoRemove()">Undo</button>
+  </div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -296,8 +303,8 @@
       // Pre-load which books are already in lists
       myLists = await getAllMyBooks();
 
-      // Show home search hint
-      showSearchHint();
+      // Load recently added section
+      loadRecentlyAdded();
     })();
 
     // ── View switching ─────────────────────────────────────────────────────
@@ -321,6 +328,7 @@
       const q = document.getElementById('search-input').value.trim();
       if (!q) return;
       const el = document.getElementById('search-results');
+      document.getElementById('recent-section').style.display = 'none';
       el.innerHTML = '<div class="loading-row"><span class="spinner"></span> Searching…</div>';
       try {
         searchCache = await searchBooks(q);
@@ -334,14 +342,7 @@
       }
     }
 
-    function showSearchHint() {
-      document.getElementById('search-results').innerHTML = `
-        <div class="empty-state">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg>
-          <h3>Search for books above</h3>
-          <p>Find titles and add them to your lists</p>
-        </div>`;
-    }
+    function showSearchHint() { /* replaced by loadRecentlyAdded */ }
 
     // ── Load a list ────────────────────────────────────────────────────────
     function filterList(listName, query) {
@@ -494,37 +495,110 @@
         card.outerHTML = renderSearchCard(book, myLists);
 
         showToast(`Added to ${LIST_LABELS[listName].label}`);
+        loadRecentlyAdded();
       } catch (err) {
         showToast('Error: ' + err.message);
         btn.disabled = false;
       }
     }
 
-    // ── Remove from list ───────────────────────────────────────────────────
-    async function handleRemove(googleBookId, listName, btn) {
+    // ── Reading progress ───────────────────────────────────────────────────
+    function toggleProgress(btn) {
+      const editor = btn.nextElementSibling;
+      const open = editor.style.display === 'none';
+      editor.style.display = open ? 'block' : 'none';
+      if (open) editor.querySelector('input').focus();
+    }
+
+    async function saveProgress(googleBookId, listName, btn) {
+      const editor = btn.closest('.progress-editor');
+      const inputs = editor.querySelectorAll('input');
+      const cur = parseInt(inputs[0].value) || 0;
+      const tot = parseInt(inputs[1].value) || 0;
       btn.disabled = true;
-      btn.textContent = 'Removing…';
+      btn.textContent = 'Saving…';
       try {
-        await removeFromList(googleBookId, listName);
-
-        // Update local state
-        if (myLists[googleBookId]) myLists[googleBookId].delete(listName);
-
-        // Refresh the list view
+        await updateBookMeta(googleBookId, listName, { current_page: cur, total_pages: tot });
+        const entry = (listCache[listName] || []).find(e => e.google_book_id === googleBookId);
+        if (entry) { entry.current_page = cur; entry.total_pages = tot; }
         await loadList(listName);
-
-        // Re-render search results if visible so checkmarks update
-        if (searchCache.length) {
-          document.getElementById('search-results').innerHTML =
-            searchCache.map(b => renderSearchCard(b, myLists)).join('');
-        }
-
-        showToast(`Removed from ${LIST_LABELS[listName].label}`);
       } catch (err) {
-        showToast('Error: ' + err.message);
+        showToast('Error saving progress');
         btn.disabled = false;
-        btn.textContent = 'Remove';
+        btn.textContent = 'Save';
       }
+    }
+
+    // ── Remove from list ───────────────────────────────────────────────────
+    let _pendingRemove = null;
+    let _pendingRemoveTimer = null;
+
+    async function flushPendingRemove() {
+      if (_pendingRemove) {
+        clearTimeout(_pendingRemoveTimer);
+        await removeFromList(_pendingRemove.googleBookId, _pendingRemove.listName).catch(() => {});
+        _pendingRemove = null;
+      }
+    }
+
+    async function undoRemove() {
+      if (!_pendingRemove) return;
+      clearTimeout(_pendingRemoveTimer);
+      const { entry, listName } = _pendingRemove;
+      _pendingRemove = null;
+      document.getElementById('toast').classList.remove('show');
+      try {
+        await addToList(entry, listName, {
+          rating: entry.rating, notes: entry.notes,
+          finished_at: entry.finished_at,
+          current_page: entry.current_page, total_pages: entry.total_pages,
+        });
+        delete listCache[listName];
+        await loadList(listName);
+        loadRecentlyAdded();
+        showToast(`Restored "${entry.title}"`);
+      } catch (err) {
+        showToast('Error restoring book');
+      }
+    }
+
+    async function handleRemove(googleBookId, listName, btn) {
+      // Flush any prior pending remove before starting a new one
+      await flushPendingRemove();
+      btn.disabled = true;
+      // Get entry before removing from cache
+      const entry = (listCache[listName] || []).find(e => e.google_book_id === googleBookId);
+
+      // Remove from local state immediately
+      if (myLists[googleBookId]) myLists[googleBookId].delete(listName);
+      if (listCache[listName]) listCache[listName] = listCache[listName].filter(e => e.google_book_id !== googleBookId);
+
+      // Remove card from DOM immediately
+      const card = btn.closest('.book-card');
+      if (card) card.remove();
+
+      // Update count badge
+      const count = (listCache[listName] || []).length;
+      const badgeEl = document.getElementById(`count-${listName}`);
+      if (badgeEl) badgeEl.textContent = count;
+
+      // Re-render search checkmarks
+      if (searchCache.length) {
+        document.getElementById('search-results').innerHTML =
+          searchCache.map(b => renderSearchCard(b, myLists)).join('');
+      }
+
+      // Store pending and show undo toast
+      _pendingRemove = { googleBookId, listName, entry };
+      showToast(`Removed "${entry?.title || 'book'}"`, true);
+
+      _pendingRemoveTimer = setTimeout(async () => {
+        if (_pendingRemove?.googleBookId === googleBookId) {
+          await removeFromList(googleBookId, listName).catch(() => {});
+          loadRecentlyAdded();
+          _pendingRemove = null;
+        }
+      }, 4000);
     }
 
     // ── Move between lists ─────────────────────────────────────────────────
@@ -928,12 +1002,36 @@
 
     // ── Toast ──────────────────────────────────────────────────────────────
     let toastTimer;
-    function showToast(msg) {
+    function showToast(msg, withUndo = false) {
       const el = document.getElementById('toast');
-      el.textContent = msg;
+      document.getElementById('toast-msg').textContent = msg;
+      const undoBtn = document.getElementById('toast-undo');
+      undoBtn.style.display = withUndo ? 'inline-block' : 'none';
       el.classList.add('show');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+      toastTimer = setTimeout(() => el.classList.remove('show'), withUndo ? 4000 : 2500);
+    }
+
+    // ── Recently added ─────────────────────────────────────────────────────
+    async function loadRecentlyAdded() {
+      try {
+        const books = await getRecentlyAdded(10);
+        const section = document.getElementById('recent-section');
+        const container = document.getElementById('recent-books');
+        if (!books.length) { section.style.display = 'none'; return; }
+        section.style.display = '';
+        container.innerHTML = books.map(entry => {
+          const info = LIST_LABELS[entry.list_name] || LIST_LABELS['to-read'];
+          const cover = entry.thumbnail
+            ? `<img class="recent-cover" src="${escHtml(entry.thumbnail)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+            : `<div class="recent-cover recent-cover-ph"></div>`;
+          return `<div class="recent-card" onclick="switchView('${entry.list_name}')">
+            ${cover}
+            <div class="recent-title">${escHtml(entry.title)}</div>
+            <span class="list-badge ${info.badge}" style="font-size:0.6rem;padding:0.1rem 0.4rem">${info.label}</span>
+          </div>`;
+        }).join('');
+      } catch (_) {}
     }
   </script>
 </body>

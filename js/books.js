@@ -139,6 +139,16 @@ async function getAllProfiles() {
   return data || [];
 }
 
+async function getRecentlyAdded(limit = 10) {
+  const { data } = await getSupabase()
+    .from('book_lists')
+    .select('*')
+    .eq('user_id', (await getSupabase().auth.getUser()).data.user.id)
+    .order('added_at', { ascending: false })
+    .limit(limit);
+  return data || [];
+}
+
 async function getAllMyBooks() {
   const { data, error } = await getSupabase()
     .from('book_lists')
@@ -229,6 +239,27 @@ function renderListCard(entry, listName) {
     ? `<div class="book-finished">Finished ${new Date(entry.finished_at).toLocaleDateString('en-US',{month:'long',year:'numeric'})}</div>`
     : '';
 
+  // Reading progress (Purchased only)
+  const cur = entry.current_page || 0;
+  const tot = entry.total_pages || 0;
+  const pct = (cur && tot) ? Math.min(Math.round(cur / tot * 100), 100) : 0;
+  const progressHtml = listName === 'purchased' ? `
+    <div class="progress-section">
+      ${(cur || tot) ? `
+        <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+        <div class="progress-label">${tot ? `${pct}% &mdash; page ${cur} of ${tot}` : `Page ${cur}`}</div>
+      ` : ''}
+      <button class="progress-toggle-btn" onclick="toggleProgress(this)">${cur ? 'Update progress' : 'Track progress'}</button>
+      <div class="progress-editor" style="display:none">
+        <div class="progress-inputs">
+          <input type="number" class="progress-input" placeholder="Current page" value="${cur || ''}" min="0" inputmode="numeric">
+          <span class="progress-sep">of</span>
+          <input type="number" class="progress-input" placeholder="Total pages" value="${tot || ''}" min="0" inputmode="numeric">
+        </div>
+        <button class="progress-save-btn" onclick="saveProgress('${id}','purchased',this)">Save</button>
+      </div>
+    </div>` : '';
+
   // Notes
   const noteText = entry.notes || '';
   const noteDisplayHtml = noteText ? `<div class="book-note">${escHtml(noteText)}</div>` : '';
@@ -243,6 +274,7 @@ function renderListCard(entry, listName) {
       ${entry.published_date ? `<div class="book-year">${escHtml(entry.published_date.slice(0,4))}</div>` : ''}
       ${finishedHtml}
       ${entry.description ? `<div class="book-desc">${escHtml(entry.description)}</div>` : ''}
+      ${progressHtml}
       <div class="star-row">${stars}</div>
       ${noteDisplayHtml}
       <button class="note-btn" onclick="toggleNote(this)">${noteText ? 'Edit note' : '+ Add note'}</button>
