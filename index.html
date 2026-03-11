@@ -94,17 +94,18 @@
         if (aal.nextLevel === 'aal2' && aal.nextLevel !== aal.currentLevel) {
           await showMfaStep();
         } else {
-          window.location.replace('app.html');
+          window.location.href = 'app.html';
         }
         return;
       }
+      // Only used for email confirmation link redirects
       getSupabase().auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
           const { data: aal } = await getSupabase().auth.mfa.getAuthenticatorAssuranceLevel();
           if (aal.nextLevel === 'aal2' && aal.nextLevel !== aal.currentLevel) {
             await showMfaStep();
           } else {
-            window.location.replace('app.html');
+            window.location.href = 'app.html';
           }
         }
       });
@@ -141,8 +142,15 @@
         showError(error.message);
         btn.disabled = false;
         btn.textContent = 'Sign In';
+        return;
       }
-      // onAuthStateChange above handles the redirect / MFA check
+      // Handle redirect directly — don't rely on onAuthStateChange (race condition)
+      const { data: aal } = await getSupabase().auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal.nextLevel === 'aal2' && aal.nextLevel !== aal.currentLevel) {
+        await showMfaStep();
+      } else {
+        window.location.href = 'app.html';
+      }
     }
 
     async function handleSignup(e) {
@@ -165,7 +173,7 @@
       if (data.user) {
         await getSupabase().from('profiles').insert({ id: data.user.id, name });
       }
-      window.location.replace('app.html');
+      window.location.href = 'app.html';
     }
 
     // ── MFA ──────────────────────────────────────────────────────────────────
@@ -173,7 +181,7 @@
       // Only use verified factors — unverified ones from abandoned enrollments cause silent failures
       const allFactors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
       const factors = allFactors.filter(f => f.status === 'verified');
-      if (!factors.length) { window.location.replace('app.html'); return; }
+      if (!factors.length) { window.location.href = 'app.html'; return; }
 
       const { data, error } = await getSupabase().auth.mfa.challenge({ factorId: factors[0].id });
       if (error) { showError(error.message); return; }
@@ -200,7 +208,7 @@
       try {
         const allFactors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
         const factors = allFactors.filter(f => f.status === 'verified');
-        if (!factors.length || !_mfaChallengeId) { window.location.replace('app.html'); return; }
+        if (!factors.length || !_mfaChallengeId) { window.location.href = 'app.html'; return; }
 
         const { error } = await getSupabase().auth.mfa.verify({
           factorId:    factors[0].id,
@@ -214,7 +222,7 @@
           btn.disabled = false;
           btn.textContent = 'Verify Code';
         } else {
-          window.location.replace('app.html');
+          window.location.href = 'app.html';
         }
       } catch (err) {
         showError('Verification error — please sign in again.');
