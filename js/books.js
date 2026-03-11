@@ -82,6 +82,46 @@ async function getList(listName) {
   return data || [];
 }
 
+// ── Share code & family connections ──────────────────────────────────────
+
+async function ensureShareCode() {
+  const userId = (await getSupabase().auth.getUser()).data.user.id;
+  const { data } = await getSupabase().from('profiles').select('share_code').eq('id', userId).single();
+  if (data?.share_code) return data.share_code;
+  // Generate a 6-char code (no ambiguous chars)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const code = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  await getSupabase().from('profiles').update({ share_code: code }).eq('id', userId);
+  return code;
+}
+
+async function findUserByShareCode(code) {
+  const { data } = await getSupabase()
+    .from('profiles')
+    .select('id, name, share_code')
+    .eq('share_code', code.toUpperCase().trim())
+    .single();
+  return data || null;
+}
+
+async function addFamilyConnection(otherUserId) {
+  const userId = (await getSupabase().auth.getUser()).data.user.id;
+  if (userId === otherUserId) throw new Error('That is your own code.');
+  const { error } = await getSupabase()
+    .from('family_connections')
+    .upsert({ user_id: userId, connected_user_id: otherUserId },
+             { onConflict: 'user_id,connected_user_id' });
+  if (error) throw error;
+}
+
+async function removeFamilyConnection(otherUserId) {
+  const userId = (await getSupabase().auth.getUser()).data.user.id;
+  await getSupabase().from('family_connections').delete()
+    .eq('user_id', userId).eq('connected_user_id', otherUserId);
+  await getSupabase().from('family_connections').delete()
+    .eq('user_id', otherUserId).eq('connected_user_id', userId);
+}
+
 async function getAllFamilyBooks() {
   const { data, error } = await getSupabase()
     .from('book_lists')

@@ -129,11 +129,19 @@
         <div class="list-hero-title">Family</div>
         <div class="list-hero-sub">See what everyone is reading</div>
       </div>
-      <button class="import-hero-btn" onclick="openInvite()" title="Invite family member">
+      <button class="import-hero-btn" onclick="openAddFamily()" title="Add family member">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
       </button>
     </div>
-    <div class="sort-bar" style="padding-top:0.75rem">
+    <!-- My share code -->
+    <div class="my-code-card">
+      <div class="my-code-label">Your family code — share this to connect</div>
+      <div class="my-code-row">
+        <span class="my-code-value" id="my-share-code">••••••</span>
+        <button class="my-code-copy" onclick="copyMyCode(this)">Copy</button>
+      </div>
+    </div>
+    <div class="sort-bar">
       <span class="sort-label">Show:</span>
       <button class="sort-btn sort-btn-active" data-family-list="to-read" onclick="loadFamily('to-read')">To Read</button>
       <button class="sort-btn" data-family-list="purchased" onclick="loadFamily('purchased')">Purchased</button>
@@ -169,22 +177,24 @@
     </div>
   </div>
 
-  <!-- Invite modal -->
-  <div id="invite-modal" class="modal-overlay" onclick="if(event.target===this)closeInvite()">
+  <!-- Add family member modal -->
+  <div id="add-family-modal" class="modal-overlay" onclick="if(event.target===this)closeAddFamily()">
     <div class="scanner-sheet">
       <div class="scanner-header">
-        <span class="scanner-title">Invite a Family Member</span>
-        <button class="scanner-close" onclick="closeInvite()">
+        <span class="scanner-title">Add Family Member</span>
+        <button class="scanner-close" onclick="closeAddFamily()">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <p class="scanner-hint">Share this link with your family. When they create an account, their book lists will appear here automatically.</p>
-      <div class="invite-link-row">
-        <input type="text" id="invite-link-input" class="scanner-isbn-input" readonly
-          value="https://xtortion1979.github.io/family-bookshelf/">
-        <button class="scanner-isbn-btn" onclick="copyInviteLink(this)">Copy</button>
+      <p class="scanner-hint">Ask them to share their 6-character family code (found at the top of their Family tab), then enter it below.</p>
+      <div class="scanner-manual-row">
+        <input type="text" id="family-code-input" class="scanner-isbn-input family-code-input"
+          placeholder="ABC123" maxlength="6" autocomplete="off" autocorrect="off" autocapitalize="characters"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')connectByCode()">
+        <button class="scanner-isbn-btn" onclick="connectByCode()">Connect</button>
       </div>
-      <p id="invite-copy-confirm" style="font-size:0.8rem;color:#16a34a;margin-top:0.5rem;text-align:center;min-height:1.2em"></p>
+      <p id="family-connect-status" class="scanner-status"></p>
     </div>
   </div>
 
@@ -845,26 +855,53 @@
       doSearch();
     }
 
-    // ── Invite ─────────────────────────────────────────────────────────────
-    function openInvite() {
-      document.getElementById('invite-modal').classList.add('open');
-      document.getElementById('invite-copy-confirm').textContent = '';
+    // ── Add family member ──────────────────────────────────────────────────
+    function openAddFamily() {
+      document.getElementById('family-code-input').value = '';
+      document.getElementById('family-connect-status').textContent = '';
+      document.getElementById('add-family-modal').classList.add('open');
+      setTimeout(() => document.getElementById('family-code-input').focus(), 150);
     }
-    function closeInvite() {
-      document.getElementById('invite-modal').classList.remove('open');
+    function closeAddFamily() {
+      document.getElementById('add-family-modal').classList.remove('open');
     }
-    async function copyInviteLink(btn) {
-      const url = document.getElementById('invite-link-input').value;
+
+    async function connectByCode() {
+      const code = document.getElementById('family-code-input').value.trim().toUpperCase();
+      const statusEl = document.getElementById('family-connect-status');
+      if (code.length !== 6) { statusEl.textContent = 'Enter a 6-character code.'; statusEl.style.color = '#dc2626'; return; }
+      statusEl.style.color = '';
+      statusEl.textContent = 'Looking up code…';
       try {
-        await navigator.clipboard.writeText(url);
-      } catch (_) {
-        // fallback for older browsers
-        document.getElementById('invite-link-input').select();
-        document.execCommand('copy');
+        const user = await findUserByShareCode(code);
+        if (!user) { statusEl.textContent = 'Code not found — double-check and try again.'; statusEl.style.color = '#dc2626'; return; }
+        await addFamilyConnection(user.id);
+        closeAddFamily();
+        showToast(`Connected with ${user.name}`);
+        loadFamily();
+      } catch (err) {
+        statusEl.textContent = err.message || 'Something went wrong.';
+        statusEl.style.color = '#dc2626';
       }
-      document.getElementById('invite-copy-confirm').textContent = 'Link copied!';
+    }
+
+    async function copyMyCode(btn) {
+      const code = document.getElementById('my-share-code').textContent;
+      if (code === '••••••') return;
+      try { await navigator.clipboard.writeText(code); } catch (_) {}
       btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = 'Copy'; document.getElementById('invite-copy-confirm').textContent = ''; }, 2500);
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    }
+
+    async function disconnectMember(otherUserId, name) {
+      if (!confirm(`Remove ${name} from your family connections?`)) return;
+      try {
+        await removeFamilyConnection(otherUserId);
+        showToast(`Disconnected from ${name}`);
+        loadFamily();
+      } catch (err) {
+        showToast('Error removing connection');
+      }
     }
 
     // ── Family view ────────────────────────────────────────────────────────
@@ -879,28 +916,30 @@
       const container = document.getElementById('family-content');
       container.innerHTML = '<div class="loading-row"><span class="spinner"></span> Loading…</div>';
 
+      // Load and display share code
+      ensureShareCode().then(code => {
+        document.getElementById('my-share-code').textContent = code;
+      }).catch(() => {});
+
       try {
         const [allBooks, profiles] = await Promise.all([getAllFamilyBooks(), getAllProfiles()]);
 
-        // Current user first, then alphabetical
-        profiles.sort((a, b) => {
-          if (a.id === currentUser.id) return -1;
-          if (b.id === currentUser.id) return 1;
-          return (a.name || '').localeCompare(b.name || '');
-        });
+        // Filter to only connected members (not current user)
+        const others = profiles.filter(p => p.id !== currentUser.id);
 
-        if (!profiles.length || (profiles.length === 1 && profiles[0].id === currentUser.id)) {
+        if (!others.length) {
           container.innerHTML = `
             <div class="family-invite-prompt">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              <h3>No family members yet</h3>
-              <p>Share the app with your family. When they create an account, their book lists will show up here automatically.</p>
-              <button class="family-invite-btn" onclick="openInvite()">Share Invite Link</button>
+              <h3>No connections yet</h3>
+              <p>Share your family code above with someone, or tap <strong>+</strong> to enter theirs.</p>
+              <button class="family-invite-btn" onclick="openAddFamily()">Add Family Member</button>
             </div>`;
           return;
         }
 
-        container.innerHTML = profiles.map(p => renderFamilyMember(p, allBooks)).join('');
+        others.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        container.innerHTML = others.map(p => renderFamilyMember(p, allBooks)).join('');
       } catch (err) {
         container.innerHTML = `<div class="empty-state"><h3>Error loading family</h3><p>${escHtml(err.message)}</p></div>`;
       }
@@ -928,10 +967,13 @@
         <div class="family-member">
           <div class="family-member-header">
             <div class="family-avatar">${initial}</div>
-            <div>
+            <div style="flex:1">
               <div class="family-name">${name}</div>
               <div class="family-count">${books.length} book${books.length !== 1 ? 's' : ''}</div>
             </div>
+            <button class="family-disconnect-btn" onclick="disconnectMember('${escHtml(profile.id)}','${name}')" title="Remove connection">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
           </div>
           <div class="family-books-row">${booksHtml}</div>
         </div>`;
