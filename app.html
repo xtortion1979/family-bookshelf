@@ -107,7 +107,7 @@
               <div style="font-size:0.85rem;font-weight:600;color:#1f2937">Two-Factor Auth (MFA)</div>
               <div id="mfa-status-label" style="font-size:0.78rem;color:#6b7280;margin-top:2px">Checking…</div>
             </div>
-            <button id="mfa-toggle-btn" onclick="toggleMfa()" style="font-size:0.8rem;font-weight:600;padding:0.4rem 0.8rem;border:none;border-radius:6px;cursor:pointer;background:#e0e7ff;color:#3730a3">…</button>
+            <button id="mfa-toggle-btn" onclick="toggleMfa()" style="font-size:0.8rem;font-weight:600;padding:0.4rem 0.8rem;border:none;border-radius:6px;cursor:pointer;background:#e0e7ff;color:#3730a3">Set up</button>
           </div>
           <!-- QR code enrollment area (hidden until enrolling) -->
           <div id="mfa-enroll-area" style="display:none;margin-top:1rem;border-top:1px solid #e5e7eb;padding-top:1rem">
@@ -311,20 +311,29 @@
     }
 
     async function refreshMfaStatus() {
-      const { data } = await getSupabase().auth.mfa.listFactors();
-      const verified = (data?.totp ?? []).filter(f => f.status === 'verified');
-      const label    = document.getElementById('mfa-status-label');
-      const btn      = document.getElementById('mfa-toggle-btn');
-      if (verified.length) {
-        label.textContent    = '✅ Enabled — your account is protected';
-        label.style.color    = '#15803d';
-        btn.textContent      = 'Remove';
-        btn.style.background = '#fee2e2';
-        btn.style.color      = '#dc2626';
-      } else {
-        label.textContent    = 'Not enabled';
-        label.style.color    = '#6b7280';
-        btn.textContent      = 'Set up';
+      const label = document.getElementById('mfa-status-label');
+      const btn   = document.getElementById('mfa-toggle-btn');
+      try {
+        const { data, error } = await getSupabase().auth.mfa.listFactors();
+        if (error) throw error;
+        const verified = (data?.totp ?? []).filter(f => f.status === 'verified');
+        if (verified.length) {
+          label.textContent    = '✅ Enabled — your account is protected';
+          label.style.color    = '#15803d';
+          btn.textContent      = 'Remove';
+          btn.style.background = '#fee2e2';
+          btn.style.color      = '#dc2626';
+        } else {
+          label.textContent    = 'Not enabled';
+          label.style.color    = '#6b7280';
+          btn.textContent      = 'Set up';
+          btn.style.background = '#e0e7ff';
+          btn.style.color      = '#3730a3';
+        }
+      } catch (e) {
+        label.textContent = 'Not enabled';
+        label.style.color = '#6b7280';
+        btn.textContent   = 'Set up';
         btn.style.background = '#e0e7ff';
         btn.style.color      = '#3730a3';
       }
