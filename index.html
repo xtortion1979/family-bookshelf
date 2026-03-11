@@ -170,8 +170,9 @@
 
     // ── MFA ──────────────────────────────────────────────────────────────────
     async function showMfaStep() {
-      // Create a challenge to get the challenge ID
-      const factors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
+      // Only use verified factors — unverified ones from abandoned enrollments cause silent failures
+      const allFactors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
+      const factors = allFactors.filter(f => f.status === 'verified');
       if (!factors.length) { window.location.replace('app.html'); return; }
 
       const { data, error } = await getSupabase().auth.mfa.challenge({ factorId: factors[0].id });
@@ -197,8 +198,9 @@
       clearError();
 
       try {
-        const factors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
-        if (!factors.length) { window.location.replace('app.html'); return; }
+        const allFactors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
+        const factors = allFactors.filter(f => f.status === 'verified');
+        if (!factors.length || !_mfaChallengeId) { window.location.replace('app.html'); return; }
 
         const { error } = await getSupabase().auth.mfa.verify({
           factorId:    factors[0].id,
