@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1e40af">
+  <title>Family Bookshelf</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>📚 Family Bookshelf</h1>
+      <p>Track what you're reading, buying, and loving</p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login"  onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab"        id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- Error message -->
+    <div class="error-msg" id="auth-error"></div>
+
+    <!-- Login form -->
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email" required>
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="Your password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
+    </form>
+
+    <!-- Signup form (hidden initially) -->
+    <form id="signup-form" style="display:none" onsubmit="handleSignup(event)">
+      <div class="form-group">
+        <label for="signup-name">Your Name</label>
+        <input type="text" id="signup-name" placeholder="Jane Smith" autocomplete="name" required>
+      </div>
+      <div class="form-group">
+        <label for="signup-email">Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email" required>
+      </div>
+      <div class="form-group">
+        <label for="signup-password">Password</label>
+        <input type="password" id="signup-password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+      </div>
+      <button type="submit" class="btn btn-primary" id="signup-btn">Create Account</button>
+    </form>
+  </div>
+
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // If already logged in, go straight to the app
+    (async () => {
+      const { data: { session } } = await getSupabase().auth.getSession();
+      if (session) window.location.replace('app.html');
+    })();
+
+    function switchTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('tab-login').classList.toggle('active', isLogin);
+      document.getElementById('tab-signup').classList.toggle('active', !isLogin);
+      document.getElementById('login-form').style.display  = isLogin ? '' : 'none';
+      document.getElementById('signup-form').style.display = isLogin ? 'none' : '';
+      clearError();
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('auth-error');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function clearError() {
+      document.getElementById('auth-error').classList.remove('show');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      clearError();
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      const email    = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const { error } = await getSupabase().auth.signInWithPassword({ email, password });
+      if (error) {
+        showError(error.message);
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      } else {
+        window.location.replace('app.html');
+      }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      clearError();
+      const btn = document.getElementById('signup-btn');
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
+      const name     = document.getElementById('signup-name').value.trim();
+      const email    = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+
+      const { data, error } = await getSupabase().auth.signUp({ email, password });
+      if (error) {
+        showError(error.message);
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+        return;
+      }
+
+      // Save display name to profiles table
+      if (data.user) {
+        await getSupabase().from('profiles').insert({ id: data.user.id, name });
+      }
+
+      window.location.replace('app.html');
+    }
+  </script>
+</body>
+</html>

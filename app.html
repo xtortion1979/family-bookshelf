@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1e40af">
+  <title>Family Bookshelf</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="app-page">
+
+  <!-- Top bar -->
+  <header class="top-bar">
+    <span class="top-bar-logo">📚 Bookshelf</span>
+    <div class="avatar" id="avatar-btn" onclick="openProfile()">?</div>
+  </header>
+
+  <!-- Search view -->
+  <div id="view-search" class="view active">
+    <div class="search-wrap">
+      <div class="search-bar">
+        <input type="search" id="search-input" placeholder="Search by title, author…" autocomplete="off"
+          onkeydown="if(event.key==='Enter') doSearch()">
+        <button onclick="doSearch()">Search</button>
+      </div>
+    </div>
+    <div style="padding:1rem">
+      <div id="search-results" class="results-grid"></div>
+    </div>
+  </div>
+
+  <!-- To Read view -->
+  <div id="view-to-read" class="view">
+    <div class="list-header">
+      <h2>To Read</h2>
+      <span class="count-badge" id="count-to-read">0</span>
+    </div>
+    <div id="list-to-read" class="results-grid"></div>
+  </div>
+
+  <!-- Purchased view -->
+  <div id="view-purchased" class="view">
+    <div class="list-header">
+      <h2>Purchased</h2>
+      <span class="count-badge" id="count-purchased">0</span>
+    </div>
+    <div id="list-purchased" class="results-grid"></div>
+  </div>
+
+  <!-- Read view -->
+  <div id="view-read" class="view">
+    <div class="list-header">
+      <h2>Read</h2>
+      <span class="count-badge" id="count-read">0</span>
+    </div>
+    <div id="list-read" class="results-grid"></div>
+  </div>
+
+  <!-- Bottom navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-search" onclick="switchView('search')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      Search
+    </button>
+    <button class="nav-item" id="nav-to-read" onclick="switchView('to-read')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+      To Read
+    </button>
+    <button class="nav-item" id="nav-purchased" onclick="switchView('purchased')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+      Purchased
+    </button>
+    <button class="nav-item" id="nav-read" onclick="switchView('read')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+      Read
+    </button>
+  </nav>
+
+  <!-- Profile / logout sheet -->
+  <div class="profile-menu" id="profile-menu">
+    <div class="profile-overlay" onclick="closeProfile()"></div>
+    <div class="profile-sheet">
+      <div class="profile-name" id="profile-name">…</div>
+      <div class="profile-email" id="profile-email">…</div>
+      <div class="profile-actions">
+        <button class="btn-logout" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/books.js"></script>
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────
+    let currentView  = 'search';
+    let currentUser  = null;
+    let myLists      = {};          // { googleBookId: Set<listName> }
+    let searchCache  = [];          // last search results
+    let listCache    = {};          // { listName: entries[] }
+
+    // ── Init ───────────────────────────────────────────────────────────────
+    (async () => {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+
+      // Show avatar initial
+      const name  = await getUserName(currentUser.id);
+      document.getElementById('avatar-btn').textContent  = name.charAt(0).toUpperCase();
+      document.getElementById('profile-name').textContent  = name;
+      document.getElementById('profile-email').textContent = currentUser.email;
+
+      // Pre-load which books are already in lists
+      myLists = await getAllMyBooks();
+
+      // Show home search hint
+      showSearchHint();
+    })();
+
+    // ── View switching ─────────────────────────────────────────────────────
+    function switchView(view) {
+      document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.getElementById('view-' + view).classList.add('active');
+      document.getElementById('nav-' + view).classList.add('active');
+      currentView = view;
+
+      // Load list data on first visit (or on each visit to stay fresh)
+      if (view !== 'search') loadList(view);
+
+      // Close any open dropdowns
+      document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+
+    // ── Search ─────────────────────────────────────────────────────────────
+    async function doSearch() {
+      const q = document.getElementById('search-input').value.trim();
+      if (!q) return;
+      const el = document.getElementById('search-results');
+      el.innerHTML = '<div class="loading-row"><span class="spinner"></span> Searching…</div>';
+      try {
+        searchCache = await searchBooks(q);
+        if (!searchCache.length) {
+          el.innerHTML = `<div class="empty-state"><h3>No results found</h3><p>Try a different title or author</p></div>`;
+          return;
+        }
+        el.innerHTML = searchCache.map(b => renderSearchCard(b, myLists)).join('');
+      } catch (err) {
+        el.innerHTML = `<div class="empty-state"><h3>Search failed</h3><p>${escHtml(err.message)}</p></div>`;
+      }
+    }
+
+    function showSearchHint() {
+      document.getElementById('search-results').innerHTML = `
+        <div class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg>
+          <h3>Search for books above</h3>
+          <p>Find titles and add them to your lists</p>
+        </div>`;
+    }
+
+    // ── Load a list ────────────────────────────────────────────────────────
+    async function loadList(listName) {
+      const container = document.getElementById('list-' + listName);
+      const countEl   = document.getElementById('count-' + listName);
+      container.innerHTML = '<div class="loading-row"><span class="spinner"></span> Loading…</div>';
+      try {
+        const entries = await getList(listName);
+        listCache[listName] = entries;
+        countEl.textContent = entries.length;
+        if (!entries.length) {
+          const labels = { 'to-read': 'books to read', 'purchased': 'purchased books', 'read': 'books you\'ve read' };
+          container.innerHTML = `
+            <div class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg>
+              <h3>No ${labels[listName]} yet</h3>
+              <p>Search for books and add them here</p>
+            </div>`;
+        } else {
+          container.innerHTML = entries.map(e => renderListCard(e, listName)).join('');
+        }
+      } catch (err) {
+        container.innerHTML = `<div class="empty-state"><h3>Error loading list</h3><p>${escHtml(err.message)}</p></div>`;
+      }
+    }
+
+    // ── Add to list ────────────────────────────────────────────────────────
+    async function handleAdd(googleBookId, listName, btn) {
+      const card  = btn.closest('.book-card');
+      const book  = searchCache.find(b => b.google_book_id === googleBookId);
+      if (!book) return;
+
+      btn.disabled = true;
+      try {
+        await addToList(book, listName);
+
+        // Update local state
+        if (!myLists[googleBookId]) myLists[googleBookId] = new Set();
+        myLists[googleBookId].add(listName);
+
+        // Invalidate list cache so it reloads fresh next visit
+        delete listCache[listName];
+
+        // Update the card's dropdown
+        card.outerHTML = renderSearchCard(book, myLists);
+
+        showToast(`Added to ${LIST_LABELS[listName].label}`);
+      } catch (err) {
+        showToast('Error: ' + err.message);
+        btn.disabled = false;
+      }
+    }
+
+    // ── Remove from list ───────────────────────────────────────────────────
+    async function handleRemove(googleBookId, listName, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Removing…';
+      try {
+        await removeFromList(googleBookId, listName);
+
+        // Update local state
+        if (myLists[googleBookId]) myLists[googleBookId].delete(listName);
+
+        // Refresh the list view
+        await loadList(listName);
+
+        // Re-render search results if visible so checkmarks update
+        if (searchCache.length) {
+          document.getElementById('search-results').innerHTML =
+            searchCache.map(b => renderSearchCard(b, myLists)).join('');
+        }
+
+        showToast(`Removed from ${LIST_LABELS[listName].label}`);
+      } catch (err) {
+        showToast('Error: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Remove';
+      }
+    }
+
+    // ── Dropdown toggle ────────────────────────────────────────────────────
+    function toggleDropdown(btn) {
+      const dropdown = btn.nextElementSibling;
+      const isOpen   = dropdown.classList.contains('open');
+      // Close all others
+      document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+      if (!isOpen) dropdown.classList.add('open');
+    }
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.add-btn-wrap')) {
+        document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+      }
+    });
+
+    // ── Profile sheet ──────────────────────────────────────────────────────
+    function openProfile()  { document.getElementById('profile-menu').classList.add('open'); }
+    function closeProfile() { document.getElementById('profile-menu').classList.remove('open'); }
+
+    // ── Toast ──────────────────────────────────────────────────────────────
+    let toastTimer;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+  </script>
+</body>
+</html>
