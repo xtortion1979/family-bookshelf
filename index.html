@@ -226,7 +226,7 @@
           btn.disabled = false;
           btn.textContent = 'Verify Code';
         } else {
-          window.location.href = 'app.html';
+          window.location.reload();
         }
       } catch (err) {
         showError('Verification error — please sign in again.');
