@@ -6,7 +6,10 @@ async function searchBooks(query, maxResults = 20) {
     url += `&key=${GOOGLE_BOOKS_API_KEY}`;
   }
   const resp = await fetch(url);
-  if (!resp.ok) throw new Error('Google Books API error');
+  if (resp.status === 429 || resp.status === 403) {
+    throw new Error('Google search limit reached for today. Search will work again after midnight Pacific time.');
+  }
+  if (!resp.ok) throw new Error('Google Books search failed. Please try again later.');
   const data = await resp.json();
   return (data.items || []).map(normalizeBook);
 }

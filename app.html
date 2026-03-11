@@ -519,18 +519,24 @@
       btn.disabled = true;
       progress.style.display = 'block';
 
+      // Save books directly from CSV — no Google Books API calls during import
+      // This avoids burning the daily API quota on large lists.
+      // Book covers can be fetched later when viewing individual books.
       let imported = 0, skipped = 0;
       for (let i = 0; i < entries.length; i++) {
         const { title, author } = entries[i];
-        progress.textContent = `Looking up ${i + 1} of ${entries.length}…\n"${title}"${author ? ' by ' + author : ''}`;
-
+        if (i % 10 === 0) {
+          progress.textContent = `Importing ${i + 1} of ${entries.length}…`;
+          await new Promise(r => setTimeout(r, 0)); // let UI update
+        }
         try {
-          // Include author in search query when available for better accuracy
-          const query = author ? `intitle:${title} inauthor:${author}` : title;
-          const results = await searchBooks(query, 1);
-          const book = results[0] || {
+          const book = {
             google_book_id: 'import-' + Date.now() + '-' + i,
-            title, authors: author, description: '', thumbnail: null, published_date: '',
+            title,
+            authors: author,
+            description: '',
+            thumbnail: null,
+            published_date: '',
           };
           await addToList(book, _importListName);
           if (!myLists[book.google_book_id]) myLists[book.google_book_id] = new Set();
@@ -539,7 +545,6 @@
         } catch (_) {
           skipped++;
         }
-        await new Promise(r => setTimeout(r, 350));
       }
 
       progress.textContent = `Done! ${imported} book${imported !== 1 ? 's' : ''} imported${skipped ? ` (${skipped} failed)` : ''}.`;
