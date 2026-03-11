@@ -82,6 +82,23 @@ async function getList(listName) {
   return data || [];
 }
 
+async function getAllFamilyBooks() {
+  const { data, error } = await getSupabase()
+    .from('book_lists')
+    .select('user_id, google_book_id, title, authors, thumbnail, list_name, rating, finished_at')
+    .order('title', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+async function getAllProfiles() {
+  const { data, error } = await getSupabase()
+    .from('profiles')
+    .select('id, name');
+  if (error) throw error;
+  return data || [];
+}
+
 async function getAllMyBooks() {
   const { data, error } = await getSupabase()
     .from('book_lists')
