@@ -13,15 +13,18 @@
 
   <!-- Top bar -->
   <header class="top-bar">
-    <span class="top-bar-logo">📚 Bookshelf</span>
+    <span class="top-bar-logo">📚 Family Bookshelf</span>
     <div class="avatar" id="avatar-btn" onclick="openProfile()">?</div>
   </header>
 
   <!-- Search view -->
   <div id="view-search" class="view active">
-    <div class="search-wrap">
+    <!-- Hero search banner -->
+    <div class="search-hero">
+      <h2 class="search-hero-title">Find your next book</h2>
+      <p class="search-hero-sub">Search millions of titles, then save them to your lists</p>
       <div class="search-bar">
-        <input type="search" id="search-input" placeholder="Search by title, author…" autocomplete="off"
+        <input type="search" id="search-input" placeholder="Title, author, ISBN…" autocomplete="off"
           onkeydown="if(event.key==='Enter') doSearch()">
         <button onclick="doSearch()">Search</button>
       </div>
@@ -33,8 +36,12 @@
 
   <!-- To Read view -->
   <div id="view-to-read" class="view">
-    <div class="list-header">
-      <h2>To Read</h2>
+    <div class="list-hero list-hero-blue">
+      <div class="list-hero-icon">🔖</div>
+      <div>
+        <div class="list-hero-title">To Read</div>
+        <div class="list-hero-sub">Books on your radar</div>
+      </div>
       <span class="count-badge" id="count-to-read">0</span>
     </div>
     <div id="list-to-read" class="results-grid"></div>
@@ -42,8 +49,12 @@
 
   <!-- Purchased view -->
   <div id="view-purchased" class="view">
-    <div class="list-header">
-      <h2>Purchased</h2>
+    <div class="list-hero list-hero-amber">
+      <div class="list-hero-icon">🛍️</div>
+      <div>
+        <div class="list-hero-title">Purchased</div>
+        <div class="list-hero-sub">Books you own</div>
+      </div>
       <span class="count-badge" id="count-purchased">0</span>
     </div>
     <div id="list-purchased" class="results-grid"></div>
@@ -51,8 +62,12 @@
 
   <!-- Read view -->
   <div id="view-read" class="view">
-    <div class="list-header">
-      <h2>Read</h2>
+    <div class="list-hero list-hero-green">
+      <div class="list-hero-icon">✅</div>
+      <div>
+        <div class="list-hero-title">Read</div>
+        <div class="list-hero-sub">Books you've finished</div>
+      </div>
       <span class="count-badge" id="count-read">0</span>
     </div>
     <div id="list-read" class="results-grid"></div>

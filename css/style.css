@@ -228,12 +228,37 @@ body {
 .nav-item svg { width: 22px; height: 22px; flex-shrink: 0; }
 .nav-item.active { color: var(--blue); }
 
-/* ── Search page ─────────────────────────────────────────────────────────── */
-.search-wrap {
-  padding: 1rem;
-  background: #fff;
-  border-bottom: 1px solid var(--gray-200);
+/* ── Search hero banner ──────────────────────────────────────────────────── */
+.search-hero {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  padding: 1.75rem 1.25rem 1.5rem;
+  border-bottom: none;
 }
+.search-hero-title {
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.25rem;
+}
+.search-hero-sub {
+  color: rgba(255,255,255,.75);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+.search-hero .search-bar input {
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.search-hero .search-bar input:focus { border-color: transparent; outline: 2px solid rgba(255,255,255,.5); }
+.search-hero .search-bar button {
+  background: #fff;
+  color: var(--blue);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.search-hero .search-bar button:hover { background: #f0f9ff; }
+
+/* ── Search bar (standalone) ─────────────────────────────────────────────── */
 .search-bar {
   display: flex;
   gap: 0.5rem;
@@ -246,6 +271,7 @@ body {
   font-size: 1rem;
   outline: none;
   transition: border-color .15s;
+  background: #fff;
 }
 .search-bar input:focus { border-color: var(--blue-light); }
 .search-bar button {
@@ -262,8 +288,33 @@ body {
 }
 .search-bar button:hover { background: #1e3a8a; }
 
-.view { display: none; padding: 1rem; }
+/* ── List hero banners ───────────────────────────────────────────────────── */
+.list-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 1rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--gray-200);
+}
+.list-hero-blue   { background: linear-gradient(135deg,#1e40af,#3b82f6); }
+.list-hero-amber  { background: linear-gradient(135deg,#92400e,#d97706); }
+.list-hero-green  { background: linear-gradient(135deg,#14532d,#16a34a); }
+.list-hero-icon   { font-size: 2rem; flex-shrink: 0; }
+.list-hero > div  { flex: 1; }
+.list-hero-title  { color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+.list-hero-sub    { color: rgba(255,255,255,.75); font-size: 0.8rem; margin-top: 2px; }
+.list-hero .count-badge {
+  background: rgba(255,255,255,.2);
+  color: #fff;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.8rem;
+}
+
+.view { display: none; }
 .view.active { display: block; }
+.view > .results-grid,
+.view > div > .results-grid { padding: 1rem; }
 
 .results-grid {
   display: grid;
@@ -559,7 +610,7 @@ body {
 }
 
 @media (min-width: 768px) {
-  .app-page { max-width: 640px; margin: 0 auto; }
-  .top-bar  { max-width: 640px; margin: 0 auto; left: 50%; right: auto; transform: translateX(-50%); position: sticky; }
-  .bottom-nav { max-width: 640px; margin: 0 auto; left: 50%; right: auto; transform: translateX(-50%); }
+  .app-page   { max-width: 680px; margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,.08); min-height: 100dvh; background: #fff; }
+  .top-bar    { position: sticky; left: unset; right: unset; transform: none; max-width: 100%; }
+  .bottom-nav { max-width: 680px; left: 50%; right: auto; transform: translateX(-50%); }
 }
