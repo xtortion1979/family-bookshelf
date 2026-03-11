@@ -129,6 +129,9 @@
         <div class="list-hero-title">Family</div>
         <div class="list-hero-sub">See what everyone is reading</div>
       </div>
+      <button class="import-hero-btn" onclick="openInvite()" title="Invite family member">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+      </button>
     </div>
     <div class="sort-bar" style="padding-top:0.75rem">
       <span class="sort-label">Show:</span>
@@ -163,6 +166,25 @@
           <button class="scanner-isbn-btn" onclick="submitManualISBN()">Search</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Invite modal -->
+  <div id="invite-modal" class="modal-overlay" onclick="if(event.target===this)closeInvite()">
+    <div class="scanner-sheet">
+      <div class="scanner-header">
+        <span class="scanner-title">Invite a Family Member</span>
+        <button class="scanner-close" onclick="closeInvite()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <p class="scanner-hint">Share this link with your family. When they create an account, their book lists will appear here automatically.</p>
+      <div class="invite-link-row">
+        <input type="text" id="invite-link-input" class="scanner-isbn-input" readonly
+          value="https://xtortion1979.github.io/family-bookshelf/">
+        <button class="scanner-isbn-btn" onclick="copyInviteLink(this)">Copy</button>
+      </div>
+      <p id="invite-copy-confirm" style="font-size:0.8rem;color:#16a34a;margin-top:0.5rem;text-align:center;min-height:1.2em"></p>
     </div>
   </div>
 
@@ -823,6 +845,28 @@
       doSearch();
     }
 
+    // ── Invite ─────────────────────────────────────────────────────────────
+    function openInvite() {
+      document.getElementById('invite-modal').classList.add('open');
+      document.getElementById('invite-copy-confirm').textContent = '';
+    }
+    function closeInvite() {
+      document.getElementById('invite-modal').classList.remove('open');
+    }
+    async function copyInviteLink(btn) {
+      const url = document.getElementById('invite-link-input').value;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch (_) {
+        // fallback for older browsers
+        document.getElementById('invite-link-input').select();
+        document.execCommand('copy');
+      }
+      document.getElementById('invite-copy-confirm').textContent = 'Link copied!';
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; document.getElementById('invite-copy-confirm').textContent = ''; }, 2500);
+    }
+
     // ── Family view ────────────────────────────────────────────────────────
     let familyActiveList = 'to-read';
 
@@ -845,8 +889,14 @@
           return (a.name || '').localeCompare(b.name || '');
         });
 
-        if (!profiles.length) {
-          container.innerHTML = '<div class="empty-state"><h3>No family members found</h3></div>';
+        if (!profiles.length || (profiles.length === 1 && profiles[0].id === currentUser.id)) {
+          container.innerHTML = `
+            <div class="family-invite-prompt">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              <h3>No family members yet</h3>
+              <p>Share the app with your family. When they create an account, their book lists will show up here automatically.</p>
+              <button class="family-invite-btn" onclick="openInvite()">Share Invite Link</button>
+            </div>`;
           return;
         }
 
