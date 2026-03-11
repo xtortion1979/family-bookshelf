@@ -84,6 +84,7 @@
   <script src="js/auth.js"></script>
   <script>
     let _mfaChallengeId = null;
+    let _mfaFactorId    = null;
 
     // Handle auth state — covers existing sessions and email confirmation redirects
     (async () => {
@@ -183,7 +184,8 @@
       const factors = allFactors.filter(f => f.status === 'verified');
       if (!factors.length) { window.location.href = 'app.html'; return; }
 
-      const { data, error } = await getSupabase().auth.mfa.challenge({ factorId: factors[0].id });
+      _mfaFactorId = factors[0].id;
+      const { data, error } = await getSupabase().auth.mfa.challenge({ factorId: _mfaFactorId });
       if (error) { showError(error.message); return; }
       _mfaChallengeId = data.id;
 
@@ -206,17 +208,10 @@
       clearError();
 
       try {
-        const allFactors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
-        const factors = allFactors.filter(f => f.status === 'verified');
-        if (!factors.length) { window.location.href = 'app.html'; return; }
-
-        // Create a fresh challenge at verify time — stored challenge may have expired
-        const { data: ch, error: chErr } = await getSupabase().auth.mfa.challenge({ factorId: factors[0].id });
-        if (chErr) { showError(chErr.message); btn.disabled = false; btn.textContent = 'Verify Code'; return; }
-
+        // Use the factorId + challengeId already obtained in showMfaStep() — no extra network calls
         const { error } = await getSupabase().auth.mfa.verify({
-          factorId:    factors[0].id,
-          challengeId: ch.id,
+          factorId:    _mfaFactorId,
+          challengeId: _mfaChallengeId,
           code,
         });
 
@@ -226,7 +221,7 @@
           btn.disabled = false;
           btn.textContent = 'Verify Code';
         } else {
-          window.location.reload();
+          window.location.replace('app.html');
         }
       } catch (err) {
         showError('Verification error — please sign in again.');
@@ -237,6 +232,7 @@
 
     function cancelMfa() {
       _mfaChallengeId = null;
+      _mfaFactorId    = null;
       getSupabase().auth.signOut();
       document.getElementById('auth-tabs').style.display   = '';
       document.getElementById('login-form').style.display  = '';
