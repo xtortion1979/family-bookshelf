@@ -270,6 +270,16 @@
     </div>
   </div>
 
+  <!-- Book detail sheet -->
+  <div id="detail-modal" class="modal-overlay" onclick="if(event.target===this)closeDetail()">
+    <div class="detail-sheet">
+      <button class="scanner-close" onclick="closeDetail()" style="position:absolute;top:0.75rem;right:0.75rem;z-index:1">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <div id="detail-content"></div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div class="toast" id="toast">
     <span id="toast-msg"></span>
@@ -998,6 +1008,182 @@
           </div>
           <div class="family-books-row">${booksHtml}</div>
         </div>`;
+    }
+
+    // ── Book detail sheet ──────────────────────────────────────────────────
+    let _detailEntry = null;
+    let _detailListName = null;
+
+    function openDetail(googleBookId, listName) {
+      // Look up entry from cache (list view) or search cache
+      let entry = null;
+      if (listName) {
+        entry = (listCache[listName] || []).find(e => e.google_book_id === googleBookId);
+      }
+      if (!entry) {
+        entry = searchCache.find(b => b.google_book_id === googleBookId);
+      }
+      if (!entry) return;
+
+      _detailEntry = entry;
+      _detailListName = listName || null;
+
+      const info = listName ? LIST_LABELS[listName] : null;
+      const rating = entry.rating || 0;
+      const stars = [1,2,3,4,5].map(n =>
+        `<span class="star detail-star${rating >= n ? ' star-filled' : ''}" onclick="detailRate(${n})">${rating >= n ? '★' : '☆'}</span>`
+      ).join('');
+
+      const cur = entry.current_page || 0;
+      const tot = entry.total_pages || 0;
+      const pct = (cur && tot) ? Math.min(Math.round(cur / tot * 100), 100) : 0;
+
+      document.getElementById('detail-content').innerHTML = `
+        <div class="detail-cover-row">
+          ${entry.thumbnail
+            ? `<img class="detail-cover" src="${escHtml(entry.thumbnail)}" alt="Cover">`
+            : `<div class="detail-cover detail-cover-ph"></div>`}
+          <div class="detail-meta">
+            ${info ? `<span class="list-badge ${info.badge}">${info.label}</span>` : ''}
+            <div class="detail-title">${escHtml(entry.title)}</div>
+            <div class="detail-author">${escHtml(entry.authors || '')}</div>
+            ${entry.published_date ? `<div class="detail-year">${escHtml(entry.published_date.slice(0,4))}</div>` : ''}
+            ${listName === 'read' && entry.finished_at
+              ? `<div class="detail-finished">Finished ${new Date(entry.finished_at).toLocaleDateString('en-US',{month:'long',year:'numeric'})}</div>`
+              : ''}
+          </div>
+        </div>
+
+        ${entry.description ? `
+        <div class="detail-section">
+          <div class="detail-section-label">Description</div>
+          <p class="detail-desc">${escHtml(entry.description)}</p>
+        </div>` : ''}
+
+        ${listName === 'purchased' ? `
+        <div class="detail-section">
+          <div class="detail-section-label">Reading Progress</div>
+          ${(cur || tot) ? `
+            <div class="progress-bar-track" style="margin-bottom:0.3rem"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+            <div class="progress-label">${tot ? `${pct}% — page ${cur} of ${tot}` : `Page ${cur}`}</div>
+          ` : ''}
+          <div class="detail-progress-row">
+            <input type="number" id="detail-cur-page" class="progress-input" placeholder="Current page" value="${cur || ''}" min="0" inputmode="numeric">
+            <span class="progress-sep">of</span>
+            <input type="number" id="detail-tot-page" class="progress-input" placeholder="Total pages" value="${tot || ''}" min="0" inputmode="numeric">
+            <button class="progress-save-btn" onclick="detailSaveProgress()">Save</button>
+          </div>
+        </div>` : ''}
+
+        ${listName ? `
+        <div class="detail-section">
+          <div class="detail-section-label">Your Rating</div>
+          <div class="detail-stars-row">${stars}</div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-label">Notes</div>
+          <textarea id="detail-notes" class="note-textarea" placeholder="Add a note…">${escHtml(entry.notes || '')}</textarea>
+          <button class="note-save-btn" style="margin-top:0.35rem" onclick="detailSaveNote()">Save note</button>
+        </div>
+
+        <div class="detail-actions">
+          ${Object.entries(LIST_LABELS).filter(([k]) => k !== listName).map(([k, mi]) =>
+            `<button class="detail-move-btn" onclick="detailMove('${escHtml(googleBookId)}','${listName}','${k}')">
+              <span class="dot ${mi.dot}"></span>Move to ${mi.label}
+            </button>`
+          ).join('')}
+          <button class="detail-remove-btn" onclick="detailRemove('${escHtml(googleBookId)}','${listName}')">Remove from list</button>
+        </div>` : `
+        <div class="detail-actions">
+          ${Object.entries(LIST_LABELS).map(([k, mi]) =>
+            `<button class="detail-move-btn" onclick="detailAdd('${escHtml(googleBookId)}','${k}',this)">
+              <span class="dot ${mi.dot}"></span>Add to ${mi.label}
+            </button>`
+          ).join('')}
+        </div>`}
+      `;
+
+      document.getElementById('detail-modal').classList.add('open');
+    }
+
+    function closeDetail() {
+      document.getElementById('detail-modal').classList.remove('open');
+      _detailEntry = null;
+      _detailListName = null;
+    }
+
+    async function detailRate(n) {
+      if (!_detailEntry || !_detailListName) return;
+      try {
+        await updateBookMeta(_detailEntry.google_book_id, _detailListName, { rating: n });
+        _detailEntry.rating = n;
+        const entry = (listCache[_detailListName] || []).find(e => e.google_book_id === _detailEntry.google_book_id);
+        if (entry) entry.rating = n;
+        // Refresh stars in sheet
+        document.querySelectorAll('.detail-star').forEach((el, i) => {
+          el.classList.toggle('star-filled', i < n);
+          el.textContent = i < n ? '★' : '☆';
+        });
+        showToast('Rating saved');
+      } catch (_) { showToast('Error saving rating'); }
+    }
+
+    async function detailSaveNote() {
+      if (!_detailEntry || !_detailListName) return;
+      const notes = document.getElementById('detail-notes').value.trim();
+      try {
+        await updateBookMeta(_detailEntry.google_book_id, _detailListName, { notes });
+        _detailEntry.notes = notes;
+        const entry = (listCache[_detailListName] || []).find(e => e.google_book_id === _detailEntry.google_book_id);
+        if (entry) entry.notes = notes;
+        showToast('Note saved');
+      } catch (_) { showToast('Error saving note'); }
+    }
+
+    async function detailSaveProgress() {
+      if (!_detailEntry || _detailListName !== 'purchased') return;
+      const cur = parseInt(document.getElementById('detail-cur-page').value) || 0;
+      const tot = parseInt(document.getElementById('detail-tot-page').value) || 0;
+      try {
+        await updateBookMeta(_detailEntry.google_book_id, 'purchased', { current_page: cur, total_pages: tot });
+        _detailEntry.current_page = cur; _detailEntry.total_pages = tot;
+        const entry = (listCache['purchased'] || []).find(e => e.google_book_id === _detailEntry.google_book_id);
+        if (entry) { entry.current_page = cur; entry.total_pages = tot; }
+        await loadList('purchased');
+        showToast('Progress saved');
+      } catch (_) { showToast('Error saving progress'); }
+    }
+
+    async function detailMove(googleBookId, fromList, toList) {
+      closeDetail();
+      const fakeBtn = { disabled: false, textContent: '', closest: () => null };
+      await handleMove(googleBookId, fromList, toList, fakeBtn);
+    }
+
+    async function detailRemove(googleBookId, listName) {
+      closeDetail();
+      const card = document.querySelector(`.book-card[data-id="${CSS.escape(googleBookId)}"]`);
+      const fakeBtn = { disabled: false, textContent: '', closest: () => card };
+      await handleRemove(googleBookId, listName, fakeBtn);
+    }
+
+    async function detailAdd(googleBookId, listName, btn) {
+      btn.disabled = true;
+      const book = searchCache.find(b => b.google_book_id === googleBookId);
+      if (!book) return;
+      try {
+        await addToList(book, listName);
+        if (!myLists[googleBookId]) myLists[googleBookId] = new Set();
+        myLists[googleBookId].add(listName);
+        delete listCache[listName];
+        btn.textContent = '✓ Added';
+        showToast(`Added to ${LIST_LABELS[listName].label}`);
+        loadRecentlyAdded();
+      } catch (err) {
+        showToast('Error: ' + err.message);
+        btn.disabled = false;
+      }
     }
 
     // ── Toast ──────────────────────────────────────────────────────────────

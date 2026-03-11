@@ -198,11 +198,12 @@ function renderSearchCard(book, myLists) {
     </button>`;
   }).join('');
 
+  const sid = escHtml(book.google_book_id);
   return `
-  <div class="book-card" data-id="${escHtml(book.google_book_id)}">
-    ${bookCover(book)}
+  <div class="book-card" data-id="${sid}">
+    <div onclick="openDetail('${sid}', null)" style="cursor:pointer">${bookCover(book)}</div>
     <div class="book-info">
-      <div class="book-title">${escHtml(book.title)}</div>
+      <div class="book-title detail-tap" onclick="openDetail('${sid}', null)">${escHtml(book.title)}</div>
       <div class="book-author">${escHtml(book.authors)}</div>
       ${book.published_date ? `<div class="book-year">${escHtml(book.published_date.slice(0,4))}</div>` : ''}
       ${book.description ? `<div class="book-desc">${escHtml(book.description)}</div>` : ''}
@@ -266,10 +267,10 @@ function renderListCard(entry, listName) {
 
   return `
   <div class="book-card" data-id="${id}">
-    ${bookCover(entry)}
+    <div onclick="openDetail('${id}','${listName}')" style="cursor:pointer">${bookCover(entry)}</div>
     <div class="book-info">
       <span class="list-badge ${info.badge}">${info.label}</span>
-      <div class="book-title">${escHtml(entry.title)}</div>
+      <div class="book-title detail-tap" onclick="openDetail('${id}','${listName}')">${escHtml(entry.title)}</div>
       <div class="book-author">${escHtml(entry.authors || '')}</div>
       ${entry.published_date ? `<div class="book-year">${escHtml(entry.published_date.slice(0,4))}</div>` : ''}
       ${finishedHtml}
