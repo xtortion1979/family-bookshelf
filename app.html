@@ -348,6 +348,10 @@
 
       // Load recently added section
       loadRecentlyAdded();
+
+      // Restore last active tab
+      const lastView = localStorage.getItem('lastView');
+      if (lastView && lastView !== 'search') switchView(lastView);
     })();
 
     // ── View switching ─────────────────────────────────────────────────────
@@ -357,6 +361,7 @@
       document.getElementById('view-' + view).classList.add('active');
       document.getElementById('nav-' + view).classList.add('active');
       currentView = view;
+      localStorage.setItem('lastView', view);
 
       // Load list data on first visit (or on each visit to stay fresh)
       if (view === 'family') loadFamily();
