@@ -85,6 +85,28 @@
       <div class="profile-name" id="profile-name">…</div>
       <div class="profile-email" id="profile-email">…</div>
       <div class="profile-actions">
+        <!-- MFA status + toggle -->
+        <div id="mfa-status" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:0.875rem 1rem;margin-bottom:0.5rem">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-size:0.85rem;font-weight:600;color:#1f2937">Two-Factor Auth (MFA)</div>
+              <div id="mfa-status-label" style="font-size:0.78rem;color:#6b7280;margin-top:2px">Checking…</div>
+            </div>
+            <button id="mfa-toggle-btn" onclick="toggleMfa()" style="font-size:0.8rem;font-weight:600;padding:0.4rem 0.8rem;border:none;border-radius:6px;cursor:pointer;background:#e0e7ff;color:#3730a3">…</button>
+          </div>
+          <!-- QR code enrollment area (hidden until enrolling) -->
+          <div id="mfa-enroll-area" style="display:none;margin-top:1rem;border-top:1px solid #e5e7eb;padding-top:1rem">
+            <p style="font-size:0.8rem;color:#4b5563;margin:0 0 0.75rem">Scan this QR code with <strong>Google Authenticator</strong> or <strong>Authy</strong>, then enter the 6-digit code to confirm.</p>
+            <div style="text-align:center;margin-bottom:0.75rem">
+              <img id="mfa-qr" src="" alt="QR Code" style="width:160px;height:160px;border:3px solid #e5e7eb;border-radius:8px">
+            </div>
+            <input type="text" id="mfa-enroll-code" placeholder="000000" maxlength="6" inputmode="numeric"
+              style="width:100%;padding:0.6rem;border:1.5px solid #e5e7eb;border-radius:7px;font-size:1.1rem;text-align:center;letter-spacing:0.3em;margin-bottom:0.5rem"
+              oninput="this.value=this.value.replace(/\D/g,'')">
+            <button onclick="confirmEnroll()" style="width:100%;padding:0.65rem;background:#1e40af;color:#fff;border:none;border-radius:7px;font-weight:600;font-size:0.875rem;cursor:pointer">Confirm &amp; Enable MFA</button>
+            <button onclick="cancelEnroll()" style="width:100%;margin-top:0.4rem;padding:0.5rem;background:none;border:none;color:#6b7280;font-size:0.8rem;cursor:pointer">Cancel</button>
+          </div>
+        </div>
         <button class="btn-logout" onclick="signOut()">Sign Out</button>
       </div>
     </div>
@@ -262,8 +284,93 @@
     });
 
     // ── Profile sheet ──────────────────────────────────────────────────────
-    function openProfile()  { document.getElementById('profile-menu').classList.add('open'); }
-    function closeProfile() { document.getElementById('profile-menu').classList.remove('open'); }
+    let _enrollFactorId = null;
+
+    async function openProfile() {
+      document.getElementById('profile-menu').classList.add('open');
+      await refreshMfaStatus();
+    }
+    function closeProfile() {
+      document.getElementById('profile-menu').classList.remove('open');
+      cancelEnroll();
+    }
+
+    async function refreshMfaStatus() {
+      const { data } = await getSupabase().auth.mfa.listFactors();
+      const verified = (data?.totp ?? []).filter(f => f.status === 'verified');
+      const label    = document.getElementById('mfa-status-label');
+      const btn      = document.getElementById('mfa-toggle-btn');
+      if (verified.length) {
+        label.textContent    = '✅ Enabled — your account is protected';
+        label.style.color    = '#15803d';
+        btn.textContent      = 'Remove';
+        btn.style.background = '#fee2e2';
+        btn.style.color      = '#dc2626';
+      } else {
+        label.textContent    = 'Not enabled';
+        label.style.color    = '#6b7280';
+        btn.textContent      = 'Set up';
+        btn.style.background = '#e0e7ff';
+        btn.style.color      = '#3730a3';
+      }
+    }
+
+    async function toggleMfa() {
+      const { data } = await getSupabase().auth.mfa.listFactors();
+      const verified = (data?.totp ?? []).filter(f => f.status === 'verified');
+      if (verified.length) {
+        await removeMfa(verified[0].id);
+      } else {
+        await startEnroll();
+      }
+    }
+
+    async function startEnroll() {
+      const { data, error } = await getSupabase().auth.mfa.enroll({ factorType: 'totp', issuer: 'Family Bookshelf' });
+      if (error) { showToast('Error: ' + error.message); return; }
+      _enrollFactorId = data.id;
+      document.getElementById('mfa-qr').src = data.totp.qr_code;
+      document.getElementById('mfa-enroll-area').style.display = '';
+      document.getElementById('mfa-toggle-btn').style.display  = 'none';
+      setTimeout(() => document.getElementById('mfa-enroll-code').focus(), 100);
+    }
+
+    async function confirmEnroll() {
+      const code = document.getElementById('mfa-enroll-code').value.trim();
+      if (code.length !== 6) { showToast('Enter all 6 digits.'); return; }
+      const { data: ch, error: chErr } = await getSupabase().auth.mfa.challenge({ factorId: _enrollFactorId });
+      if (chErr) { showToast('Error: ' + chErr.message); return; }
+      const { error } = await getSupabase().auth.mfa.verify({
+        factorId: _enrollFactorId, challengeId: ch.id, code,
+      });
+      if (error) {
+        showToast('Wrong code — try again.');
+        document.getElementById('mfa-enroll-code').value = '';
+      } else {
+        const fid = _enrollFactorId;
+        cancelEnroll();
+        await refreshMfaStatus();
+        showToast('MFA enabled! 🔐');
+      }
+    }
+
+    async function removeMfa(factorId) {
+      if (!confirm('Remove two-factor authentication? Your account will be less secure.')) return;
+      const { error } = await getSupabase().auth.mfa.unenroll({ factorId });
+      if (error) { showToast('Error: ' + error.message); return; }
+      await refreshMfaStatus();
+      showToast('MFA removed.');
+    }
+
+    function cancelEnroll() {
+      if (_enrollFactorId) {
+        getSupabase().auth.mfa.unenroll({ factorId: _enrollFactorId }).catch(() => {});
+        _enrollFactorId = null;
+      }
+      document.getElementById('mfa-enroll-area').style.display = 'none';
+      document.getElementById('mfa-enroll-code').value         = '';
+      document.getElementById('mfa-toggle-btn').style.display  = '';
+    }
 
     // ── Toast ──────────────────────────────────────────────────────────────
     let toastTimer;
