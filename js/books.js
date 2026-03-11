@@ -136,9 +136,15 @@ function renderSearchCard(book, myLists) {
   </div>`;
 }
 
-// Render a list card (with remove button)
+// Render a list card (with move dropdown + remove)
 function renderListCard(entry, listName) {
   const info = LIST_LABELS[listName];
+  const moveItems = Object.entries(LIST_LABELS)
+    .filter(([key]) => key !== listName)
+    .map(([key, mi]) => `<button class="dropdown-item" onclick="handleMove('${escHtml(entry.google_book_id)}', '${listName}', '${key}', this)">
+      <span class="dot ${mi.dot}"></span>Move to ${mi.label}
+    </button>`).join('');
+
   return `
   <div class="book-card" data-id="${escHtml(entry.google_book_id)}">
     ${bookCover(entry)}
@@ -148,9 +154,16 @@ function renderListCard(entry, listName) {
       <div class="book-author">${escHtml(entry.authors || '')}</div>
       ${entry.published_date ? `<div class="book-year">${escHtml(entry.published_date.slice(0,4))}</div>` : ''}
       ${entry.description ? `<div class="book-desc">${escHtml(entry.description)}</div>` : ''}
-      <button class="remove-btn" onclick="handleRemove('${escHtml(entry.google_book_id)}', '${listName}', this)">
-        Remove
-      </button>
+      <div class="add-btn-wrap" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+        <div style="position:relative">
+          <button class="add-btn" onclick="toggleDropdown(this)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            Move
+          </button>
+          <div class="dropdown">${moveItems}</div>
+        </div>
+        <button class="remove-btn" onclick="handleRemove('${escHtml(entry.google_book_id)}', '${listName}', this)">Remove</button>
+      </div>
     </div>
   </div>`;
 }

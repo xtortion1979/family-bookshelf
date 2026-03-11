@@ -283,6 +283,39 @@
       }
     }
 
+    // ── Move between lists ─────────────────────────────────────────────────
+    async function handleMove(googleBookId, fromList, toList, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Moving…';
+      try {
+        const card = btn.closest('.book-card');
+        const book = {
+          google_book_id: googleBookId,
+          title:          card.querySelector('.book-title')?.textContent || '',
+          authors:        card.querySelector('.book-author')?.textContent || '',
+          thumbnail:      card.querySelector('.book-cover')?.src || null,
+          description:    card.querySelector('.book-desc')?.textContent || '',
+          published_date: card.querySelector('.book-year')?.textContent || '',
+        };
+
+        await addToList(book, toList);
+        await removeFromList(googleBookId, fromList);
+
+        if (!myLists[googleBookId]) myLists[googleBookId] = new Set();
+        myLists[googleBookId].add(toList);
+        myLists[googleBookId].delete(fromList);
+
+        await loadList(fromList);
+        await loadList(toList);
+
+        showToast(`Moved to ${LIST_LABELS[toList].label}`);
+      } catch (err) {
+        showToast('Error: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Move';
+      }
+    }
+
     // ── Dropdown toggle ────────────────────────────────────────────────────
     function toggleDropdown(btn) {
       const dropdown = btn.nextElementSibling;
