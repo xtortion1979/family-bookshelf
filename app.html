@@ -153,8 +153,8 @@
         <button onclick="closeImport()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;line-height:1">✕</button>
       </div>
       <div style="font-size:0.8rem;color:#6b7280;margin-bottom:1rem">Adding to: <strong id="import-target-label">…</strong></div>
-      <p style="font-size:0.82rem;color:#4b5563;margin-bottom:0.6rem">Paste book titles below (one per line), or upload a CSV with a single title column.</p>
-      <textarea id="import-textarea" placeholder="The Great Gatsby&#10;To Kill a Mockingbird&#10;1984"
+      <p style="font-size:0.82rem;color:#4b5563;margin-bottom:0.6rem">Upload a CSV with <strong>Book Title</strong> and <strong>Author</strong> columns, or paste lines as <em>Title, Author</em> (author optional).</p>
+      <textarea id="import-textarea" placeholder="The Great Gatsby, F. Scott Fitzgerald&#10;To Kill a Mockingbird, Harper Lee&#10;1984, George Orwell"
         style="width:100%;height:130px;padding:0.75rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.875rem;resize:vertical;font-family:inherit;outline:none;margin-bottom:0.6rem"></textarea>
       <label style="display:block;text-align:center;padding:0.55rem;background:#f9fafb;border:1.5px dashed #d1d5db;border-radius:8px;cursor:pointer;font-size:0.82rem;color:#6b7280;margin-bottom:0.75rem">
         <input type="file" id="import-file" accept=".csv,.txt" style="display:none" onchange="handleImportFile(this)">
@@ -501,11 +501,18 @@
 
     async function startImport() {
       const raw = document.getElementById('import-textarea').value;
-      const titles = raw.split('\n')
-        .map(l => l.split(',')[0].replace(/^"|"$/g, '').trim())
-        .filter(l => l && !/^(title|book\s*title|name)$/i.test(l));
 
-      if (!titles.length) { showToast('No titles found.'); return; }
+      // Parse each line into { title, author } — handles quoted CSV fields
+      const parseCell = s => s.replace(/^"|"$/g, '').trim();
+      const entries = raw.split('\n').map(line => {
+        // Split on first comma only (author may contain commas in quoted fields)
+        const m = line.match(/^("(?:[^"]|"")*"|[^,]*),?(.*)?$/);
+        const title  = m ? parseCell(m[1]) : '';
+        const author = m && m[2] ? parseCell(m[2]) : '';
+        return { title, author };
+      }).filter(e => e.title && !/^(book\s*title|title|name)$/i.test(e.title));
+
+      if (!entries.length) { showToast('No titles found.'); return; }
 
       const btn      = document.getElementById('import-btn');
       const progress = document.getElementById('import-progress');
@@ -513,15 +520,17 @@
       progress.style.display = 'block';
 
       let imported = 0, skipped = 0;
-      for (let i = 0; i < titles.length; i++) {
-        const title = titles[i];
-        progress.textContent = `Looking up ${i + 1} of ${titles.length}…\n"${title}"`;
+      for (let i = 0; i < entries.length; i++) {
+        const { title, author } = entries[i];
+        progress.textContent = `Looking up ${i + 1} of ${entries.length}…\n"${title}"${author ? ' by ' + author : ''}`;
 
         try {
-          const results = await searchBooks(title, 1);
+          // Include author in search query when available for better accuracy
+          const query = author ? `intitle:${title} inauthor:${author}` : title;
+          const results = await searchBooks(query, 1);
           const book = results[0] || {
             google_book_id: 'import-' + Date.now() + '-' + i,
-            title, authors: '', description: '', thumbnail: null, published_date: '',
+            title, authors: author, description: '', thumbnail: null, published_date: '',
           };
           await addToList(book, _importListName);
           if (!myLists[book.google_book_id]) myLists[book.google_book_id] = new Set();
