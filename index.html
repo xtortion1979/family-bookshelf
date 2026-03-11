@@ -208,11 +208,15 @@
       try {
         const allFactors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
         const factors = allFactors.filter(f => f.status === 'verified');
-        if (!factors.length || !_mfaChallengeId) { window.location.href = 'app.html'; return; }
+        if (!factors.length) { window.location.href = 'app.html'; return; }
+
+        // Create a fresh challenge at verify time — stored challenge may have expired
+        const { data: ch, error: chErr } = await getSupabase().auth.mfa.challenge({ factorId: factors[0].id });
+        if (chErr) { showError(chErr.message); btn.disabled = false; btn.textContent = 'Verify Code'; return; }
 
         const { error } = await getSupabase().auth.mfa.verify({
           factorId:    factors[0].id,
-          challengeId: _mfaChallengeId,
+          challengeId: ch.id,
           code,
         });
 
