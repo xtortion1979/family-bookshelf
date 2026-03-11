@@ -196,20 +196,28 @@
       btn.textContent = 'Verifying…';
       clearError();
 
-      const factors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
-      const { error } = await getSupabase().auth.mfa.verify({
-        factorId:    factors[0].id,
-        challengeId: _mfaChallengeId,
-        code,
-      });
+      try {
+        const factors = (await getSupabase().auth.mfa.listFactors()).data?.totp ?? [];
+        if (!factors.length) { window.location.replace('app.html'); return; }
 
-      if (error) {
-        showError('Incorrect code. Try again.');
-        document.getElementById('mfa-code').value = '';
+        const { error } = await getSupabase().auth.mfa.verify({
+          factorId:    factors[0].id,
+          challengeId: _mfaChallengeId,
+          code,
+        });
+
+        if (error) {
+          showError('Incorrect code. Try again.');
+          document.getElementById('mfa-code').value = '';
+          btn.disabled = false;
+          btn.textContent = 'Verify Code';
+        } else {
+          window.location.replace('app.html');
+        }
+      } catch (err) {
+        showError('Verification error — please sign in again.');
         btn.disabled = false;
         btn.textContent = 'Verify Code';
-      } else {
-        window.location.replace('app.html');
       }
     }
 
