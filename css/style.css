@@ -590,6 +590,24 @@ body {
   font-size: 0.875rem;
 }
 
+/* ── List filter bar ─────────────────────────────────────────────────────── */
+.list-filter-bar {
+  padding: 0.6rem 1rem 0;
+}
+.list-filter-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  background: #fff;
+  color: var(--gray-900);
+  transition: border-color .15s;
+}
+.list-filter-input:focus { border-color: #1e40af; }
+
 /* ── Import button in list hero ─────────────────────────────────────────── */
 .import-hero-btn {
   background: rgba(255,255,255,.2);

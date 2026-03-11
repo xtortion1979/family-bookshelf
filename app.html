@@ -51,6 +51,9 @@
         </button>
       </div>
     </div>
+    <div class="list-filter-bar">
+      <input type="search" class="list-filter-input" placeholder="Filter To Read…" oninput="filterList('to-read', this.value)">
+    </div>
     <div id="list-to-read" class="results-grid"></div>
   </div>
 
@@ -69,6 +72,9 @@
         </button>
       </div>
     </div>
+    <div class="list-filter-bar">
+      <input type="search" class="list-filter-input" placeholder="Filter Purchased…" oninput="filterList('purchased', this.value)">
+    </div>
     <div id="list-purchased" class="results-grid"></div>
   </div>
 
@@ -86,6 +92,9 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
         </button>
       </div>
+    </div>
+    <div class="list-filter-bar">
+      <input type="search" class="list-filter-input" placeholder="Filter Read…" oninput="filterList('read', this.value)">
     </div>
     <div id="list-read" class="results-grid"></div>
   </div>
@@ -243,10 +252,23 @@
     }
 
     // ── Load a list ────────────────────────────────────────────────────────
+    function filterList(listName, query) {
+      const q = query.toLowerCase().trim();
+      const container = document.getElementById('list-' + listName);
+      const cards = container.querySelectorAll('.book-card');
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = (!q || text.includes(q)) ? '' : 'none';
+      });
+    }
+
     async function loadList(listName) {
       const container = document.getElementById('list-' + listName);
       const countEl   = document.getElementById('count-' + listName);
       container.innerHTML = '<div class="loading-row"><span class="spinner"></span> Loading…</div>';
+      // Clear filter input on reload so results aren't unexpectedly hidden
+      const filterInput = container.previousElementSibling?.querySelector('.list-filter-input');
+      if (filterInput) filterInput.value = '';
       try {
         const entries = await getList(listName);
         listCache[listName] = entries;
@@ -519,32 +541,34 @@
       btn.disabled = true;
       progress.style.display = 'block';
 
-      // Save books directly from CSV — no Google Books API calls during import
-      // This avoids burning the daily API quota on large lists.
-      // Book covers can be fetched later when viewing individual books.
       let imported = 0, skipped = 0;
       for (let i = 0; i < entries.length; i++) {
         const { title, author } = entries[i];
-        if (i % 10 === 0) {
-          progress.textContent = `Importing ${i + 1} of ${entries.length}…`;
-          await new Promise(r => setTimeout(r, 0)); // let UI update
-        }
+        progress.textContent = `Looking up ${i + 1} of ${entries.length}…\n"${title}"${author ? ' by ' + author : ''}`;
         try {
-          const book = {
+          const query = author ? `intitle:${title} inauthor:${author}` : title;
+          const results = await searchBooks(query, 1);
+          const book = results[0] || {
             google_book_id: 'import-' + Date.now() + '-' + i,
-            title,
-            authors: author,
-            description: '',
-            thumbnail: null,
-            published_date: '',
+            title, authors: author, description: '', thumbnail: null, published_date: '',
           };
           await addToList(book, _importListName);
           if (!myLists[book.google_book_id]) myLists[book.google_book_id] = new Set();
           myLists[book.google_book_id].add(_importListName);
           imported++;
-        } catch (_) {
+        } catch (err) {
+          // Stop immediately if rate-limited so the user knows what happened
+          if (err.message && err.message.includes('limit reached')) {
+            progress.textContent = `Rate limit hit after ${imported} books. ${err.message}\n\nImport the remaining books tomorrow.`;
+            btn.disabled = false;
+            btn.textContent = 'Close';
+            btn.onclick = () => { closeImport(); btn.onclick = startImport; };
+            await loadList(_importListName);
+            return;
+          }
           skipped++;
         }
+        await new Promise(r => setTimeout(r, 350));
       }
 
       progress.textContent = `Done! ${imported} book${imported !== 1 ? 's' : ''} imported${skipped ? ` (${skipped} failed)` : ''}.`;
