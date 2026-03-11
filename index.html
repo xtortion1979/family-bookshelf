@@ -62,10 +62,17 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script>
-    // If already logged in, go straight to the app
+    // Handle auth state — covers both existing sessions and
+    // the redirect back from Supabase's email confirmation link.
     (async () => {
+      // supabase-js v2 automatically exchanges the token in the URL hash
       const { data: { session } } = await getSupabase().auth.getSession();
-      if (session) window.location.replace('app.html');
+      if (session) { window.location.replace('app.html'); return; }
+
+      // Also listen for the auth event fired after email confirmation redirect
+      getSupabase().auth.onAuthStateChange((event, session) => {
+        if (session) window.location.replace('app.html');
+      });
     })();
 
     function switchTab(tab) {
