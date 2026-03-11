@@ -43,7 +43,12 @@
         <div class="list-hero-title">To Read</div>
         <div class="list-hero-sub">Books on your radar</div>
       </div>
-      <span class="count-badge" id="count-to-read">0</span>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <span class="count-badge" id="count-to-read">0</span>
+        <button class="import-hero-btn" onclick="openImport('to-read')" title="Import from CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        </button>
+      </div>
     </div>
     <div id="list-to-read" class="results-grid"></div>
   </div>
@@ -56,7 +61,12 @@
         <div class="list-hero-title">Purchased</div>
         <div class="list-hero-sub">Books you own</div>
       </div>
-      <span class="count-badge" id="count-purchased">0</span>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <span class="count-badge" id="count-purchased">0</span>
+        <button class="import-hero-btn" onclick="openImport('purchased')" title="Import from CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        </button>
+      </div>
     </div>
     <div id="list-purchased" class="results-grid"></div>
   </div>
@@ -69,7 +79,12 @@
         <div class="list-hero-title">Read</div>
         <div class="list-hero-sub">Books you've finished</div>
       </div>
-      <span class="count-badge" id="count-read">0</span>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <span class="count-badge" id="count-read">0</span>
+        <button class="import-hero-btn" onclick="openImport('read')" title="Import from CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        </button>
+      </div>
     </div>
     <div id="list-read" class="results-grid"></div>
   </div>
@@ -125,6 +140,28 @@
         </div>
         <button class="btn-logout" onclick="signOut()">Sign Out</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Import sheet -->
+  <div class="profile-menu" id="import-modal">
+    <div class="profile-overlay" onclick="closeImport()"></div>
+    <div class="profile-sheet">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.25rem">
+        <div class="profile-name" style="font-size:1rem">Import Books</div>
+        <button onclick="closeImport()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;line-height:1">✕</button>
+      </div>
+      <div style="font-size:0.8rem;color:#6b7280;margin-bottom:1rem">Adding to: <strong id="import-target-label">…</strong></div>
+      <p style="font-size:0.82rem;color:#4b5563;margin-bottom:0.6rem">Paste book titles below (one per line), or upload a CSV with a single title column.</p>
+      <textarea id="import-textarea" placeholder="The Great Gatsby&#10;To Kill a Mockingbird&#10;1984"
+        style="width:100%;height:130px;padding:0.75rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.875rem;resize:vertical;font-family:inherit;outline:none;margin-bottom:0.6rem"></textarea>
+      <label style="display:block;text-align:center;padding:0.55rem;background:#f9fafb;border:1.5px dashed #d1d5db;border-radius:8px;cursor:pointer;font-size:0.82rem;color:#6b7280;margin-bottom:0.75rem">
+        <input type="file" id="import-file" accept=".csv,.txt" style="display:none" onchange="handleImportFile(this)">
+        Upload .csv or .txt file
+      </label>
+      <div id="import-progress" style="display:none;text-align:center;padding:0.7rem;background:#eff6ff;border-radius:8px;margin-bottom:0.75rem;font-size:0.82rem;color:#1e40af;line-height:1.4"></div>
+      <button id="import-btn" onclick="startImport()" style="width:100%;padding:0.75rem;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer">Import Books</button>
+      <button onclick="closeImport()" style="width:100%;margin-top:0.4rem;padding:0.5rem;background:none;border:none;color:#6b7280;font-size:0.8rem;cursor:pointer">Cancel</button>
     </div>
   </div>
 
@@ -428,6 +465,75 @@
       document.getElementById('mfa-enroll-area').style.display = 'none';
       document.getElementById('mfa-enroll-code').value         = '';
       document.getElementById('mfa-toggle-btn').style.display  = '';
+    }
+
+    // ── Import ─────────────────────────────────────────────────────────────
+    let _importListName = null;
+
+    function openImport(listName) {
+      _importListName = listName;
+      document.getElementById('import-target-label').textContent = LIST_LABELS[listName].label;
+      document.getElementById('import-textarea').value = '';
+      document.getElementById('import-file').value = '';
+      document.getElementById('import-progress').style.display = 'none';
+      const btn = document.getElementById('import-btn');
+      btn.disabled = false;
+      btn.textContent = 'Import Books';
+      btn.onclick = startImport;
+      document.getElementById('import-modal').classList.add('open');
+    }
+
+    function closeImport() {
+      document.getElementById('import-modal').classList.remove('open');
+    }
+
+    function handleImportFile(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => { document.getElementById('import-textarea').value = e.target.result; };
+      reader.readAsText(file);
+    }
+
+    async function startImport() {
+      const raw = document.getElementById('import-textarea').value;
+      const titles = raw.split('\n')
+        .map(l => l.split(',')[0].replace(/^"|"$/g, '').trim())
+        .filter(l => l && !/^(title|book\s*title|name)$/i.test(l));
+
+      if (!titles.length) { showToast('No titles found.'); return; }
+
+      const btn      = document.getElementById('import-btn');
+      const progress = document.getElementById('import-progress');
+      btn.disabled = true;
+      progress.style.display = 'block';
+
+      let imported = 0, skipped = 0;
+      for (let i = 0; i < titles.length; i++) {
+        const title = titles[i];
+        progress.textContent = `Looking up ${i + 1} of ${titles.length}…\n"${title}"`;
+
+        try {
+          const results = await searchBooks(title, 1);
+          const book = results[0] || {
+            google_book_id: 'import-' + Date.now() + '-' + i,
+            title, authors: '', description: '', thumbnail: null, published_date: '',
+          };
+          await addToList(book, _importListName);
+          if (!myLists[book.google_book_id]) myLists[book.google_book_id] = new Set();
+          myLists[book.google_book_id].add(_importListName);
+          imported++;
+        } catch (_) {
+          skipped++;
+        }
+        await new Promise(r => setTimeout(r, 350));
+      }
+
+      progress.textContent = `Done! ${imported} book${imported !== 1 ? 's' : ''} imported${skipped ? ` (${skipped} failed)` : ''}.`;
+      btn.disabled = false;
+      btn.textContent = 'Close';
+      btn.onclick = () => { closeImport(); btn.onclick = startImport; };
+      await loadList(_importListName);
     }
 
     // ── Toast ──────────────────────────────────────────────────────────────
