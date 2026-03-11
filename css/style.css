@@ -590,6 +590,117 @@ body {
   font-size: 0.875rem;
 }
 
+/* ── Sort bar ────────────────────────────────────────────────────────────── */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 1rem 0;
+  flex-wrap: wrap;
+}
+.sort-label {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 0.1rem;
+}
+.sort-btn {
+  padding: 0.2rem 0.55rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--gray-500);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .15s;
+}
+.sort-btn:hover { border-color: #1e40af; color: #1e40af; }
+.sort-btn-active { background: #1e40af; border-color: #1e40af; color: #fff; }
+
+/* ── Stars ───────────────────────────────────────────────────────────────── */
+.star-row {
+  display: flex;
+  gap: 1px;
+  margin: 0.35rem 0 0.1rem;
+}
+.star {
+  font-size: 1.1rem;
+  color: var(--gray-200);
+  cursor: pointer;
+  line-height: 1;
+  transition: color .1s;
+  user-select: none;
+}
+.star:hover,
+.star-row:hover .star { color: #f59e0b; }
+.star-row .star:hover ~ .star { color: var(--gray-200); }
+.star.star-filled { color: #f59e0b; }
+
+/* ── Notes ───────────────────────────────────────────────────────────────── */
+.book-note {
+  font-size: 0.78rem;
+  color: var(--gray-500);
+  background: var(--gray-50);
+  border-left: 3px solid var(--gray-200);
+  padding: 0.3rem 0.5rem;
+  border-radius: 0 4px 4px 0;
+  margin: 0.3rem 0 0.1rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.note-btn {
+  background: none;
+  border: none;
+  color: #1e40af;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  margin: 0.1rem 0 0.2rem;
+  font-family: inherit;
+}
+.note-btn:hover { text-decoration: underline; }
+.note-editor {
+  margin: 0.3rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.note-textarea {
+  width: 100%;
+  min-height: 70px;
+  padding: 0.4rem 0.5rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+.note-textarea:focus { border-color: #1e40af; }
+.note-save-btn {
+  align-self: flex-end;
+  padding: 0.3rem 0.75rem;
+  background: #1e40af;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.note-save-btn:disabled { opacity: .6; }
+
+/* ── Finished date ───────────────────────────────────────────────────────── */
+.book-finished {
+  font-size: 0.75rem;
+  color: #16a34a;
+  font-weight: 600;
+  margin: 0.1rem 0;
+}
+
 /* ── List filter bar ─────────────────────────────────────────────────────── */
 .list-filter-bar {
   padding: 0.6rem 1rem 0;

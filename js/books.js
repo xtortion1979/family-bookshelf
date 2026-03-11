@@ -34,7 +34,7 @@ function normalizeBook(item) {
 
 // ── Supabase list helpers ─────────────────────────────────────────────────
 
-async function addToList(book, listName) {
+async function addToList(book, listName, extra = {}) {
   const { error } = await getSupabase()
     .from('book_lists')
     .upsert({
@@ -46,7 +46,18 @@ async function addToList(book, listName) {
       description:    book.description,
       published_date: book.published_date,
       list_name:      listName,
+      ...extra,
     }, { onConflict: 'user_id,google_book_id,list_name' });
+  if (error) throw error;
+}
+
+async function updateBookMeta(googleBookId, listName, data) {
+  const { error } = await getSupabase()
+    .from('book_lists')
+    .update(data)
+    .eq('user_id', (await getSupabase().auth.getUser()).data.user.id)
+    .eq('google_book_id', googleBookId)
+    .eq('list_name', listName);
   if (error) throw error;
 }
 
@@ -142,22 +153,47 @@ function renderSearchCard(book, myLists) {
 // Render a list card (with move dropdown + remove)
 function renderListCard(entry, listName) {
   const info = LIST_LABELS[listName];
+  const id = escHtml(entry.google_book_id);
+
   const moveItems = Object.entries(LIST_LABELS)
     .filter(([key]) => key !== listName)
-    .map(([key, mi]) => `<button class="dropdown-item" onclick="handleMove('${escHtml(entry.google_book_id)}', '${listName}', '${key}', this)">
+    .map(([key, mi]) => `<button class="dropdown-item" onclick="handleMove('${id}', '${listName}', '${key}', this)">
       <span class="dot ${mi.dot}"></span>Move to ${mi.label}
     </button>`).join('');
 
+  // Stars (1–5)
+  const rating = entry.rating || 0;
+  const stars = [1,2,3,4,5].map(n =>
+    `<span class="star${rating >= n ? ' star-filled' : ''}" onclick="handleRating('${id}','${listName}',${n},this)">★</span>`
+  ).join('');
+
+  // Finished date (Read list only)
+  const finishedHtml = listName === 'read' && entry.finished_at
+    ? `<div class="book-finished">Finished ${new Date(entry.finished_at).toLocaleDateString('en-US',{month:'long',year:'numeric'})}</div>`
+    : '';
+
+  // Notes
+  const noteText = entry.notes || '';
+  const noteDisplayHtml = noteText ? `<div class="book-note">${escHtml(noteText)}</div>` : '';
+
   return `
-  <div class="book-card" data-id="${escHtml(entry.google_book_id)}">
+  <div class="book-card" data-id="${id}">
     ${bookCover(entry)}
     <div class="book-info">
       <span class="list-badge ${info.badge}">${info.label}</span>
       <div class="book-title">${escHtml(entry.title)}</div>
       <div class="book-author">${escHtml(entry.authors || '')}</div>
       ${entry.published_date ? `<div class="book-year">${escHtml(entry.published_date.slice(0,4))}</div>` : ''}
+      ${finishedHtml}
       ${entry.description ? `<div class="book-desc">${escHtml(entry.description)}</div>` : ''}
-      <div class="add-btn-wrap" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+      <div class="star-row">${stars}</div>
+      ${noteDisplayHtml}
+      <button class="note-btn" onclick="toggleNote(this)">${noteText ? 'Edit note' : '+ Add note'}</button>
+      <div class="note-editor" style="display:none">
+        <textarea class="note-textarea" placeholder="Add a note about this book…">${escHtml(noteText)}</textarea>
+        <button class="note-save-btn" onclick="saveNote('${id}','${listName}',this)">Save</button>
+      </div>
+      <div class="add-btn-wrap" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.4rem">
         <div style="position:relative">
           <button class="add-btn" onclick="toggleDropdown(this)">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
@@ -165,7 +201,7 @@ function renderListCard(entry, listName) {
           </button>
           <div class="dropdown">${moveItems}</div>
         </div>
-        <button class="remove-btn" onclick="handleRemove('${escHtml(entry.google_book_id)}', '${listName}', this)">Remove</button>
+        <button class="remove-btn" onclick="handleRemove('${id}', '${listName}', this)">Remove</button>
       </div>
     </div>
   </div>`;

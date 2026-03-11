@@ -54,6 +54,12 @@
     <div class="list-filter-bar">
       <input type="search" class="list-filter-input" placeholder="Filter To Read…" oninput="filterList('to-read', this.value)">
     </div>
+    <div class="sort-bar">
+      <span class="sort-label">Sort:</span>
+      <button class="sort-btn sort-btn-active" data-sort-list="to-read" data-sort="newest" onclick="setSortOrder('to-read','newest')">Newest</button>
+      <button class="sort-btn" data-sort-list="to-read" data-sort="az" onclick="setSortOrder('to-read','az')">A–Z</button>
+      <button class="sort-btn" data-sort-list="to-read" data-sort="author" onclick="setSortOrder('to-read','author')">Author</button>
+    </div>
     <div id="list-to-read" class="results-grid"></div>
   </div>
 
@@ -75,6 +81,12 @@
     <div class="list-filter-bar">
       <input type="search" class="list-filter-input" placeholder="Filter Purchased…" oninput="filterList('purchased', this.value)">
     </div>
+    <div class="sort-bar">
+      <span class="sort-label">Sort:</span>
+      <button class="sort-btn sort-btn-active" data-sort-list="purchased" data-sort="newest" onclick="setSortOrder('purchased','newest')">Newest</button>
+      <button class="sort-btn" data-sort-list="purchased" data-sort="az" onclick="setSortOrder('purchased','az')">A–Z</button>
+      <button class="sort-btn" data-sort-list="purchased" data-sort="author" onclick="setSortOrder('purchased','author')">Author</button>
+    </div>
     <div id="list-purchased" class="results-grid"></div>
   </div>
 
@@ -95,6 +107,13 @@
     </div>
     <div class="list-filter-bar">
       <input type="search" class="list-filter-input" placeholder="Filter Read…" oninput="filterList('read', this.value)">
+    </div>
+    <div class="sort-bar">
+      <span class="sort-label">Sort:</span>
+      <button class="sort-btn sort-btn-active" data-sort-list="read" data-sort="newest" onclick="setSortOrder('read','newest')">Newest</button>
+      <button class="sort-btn" data-sort-list="read" data-sort="az" onclick="setSortOrder('read','az')">A–Z</button>
+      <button class="sort-btn" data-sort-list="read" data-sort="author" onclick="setSortOrder('read','author')">Author</button>
+      <button class="sort-btn" data-sort-list="read" data-sort="rating" onclick="setSortOrder('read','rating')">Rating</button>
     </div>
     <div id="list-read" class="results-grid"></div>
   </div>
@@ -262,6 +281,98 @@
       });
     }
 
+    // ── Sort ───────────────────────────────────────────────────────────────
+    const listSort = { 'to-read': 'newest', 'purchased': 'newest', 'read': 'newest' };
+
+    function sortEntries(entries, sort) {
+      const arr = [...entries];
+      if (sort === 'az')     arr.sort((a, b) => (a.title   || '').localeCompare(b.title   || ''));
+      if (sort === 'author') arr.sort((a, b) => (a.authors || '').localeCompare(b.authors || ''));
+      if (sort === 'rating') arr.sort((a, b) => (b.rating  || 0) - (a.rating  || 0));
+      // 'newest' keeps DB order (added_at desc)
+      return arr;
+    }
+
+    function setSortOrder(listName, sort) {
+      listSort[listName] = sort;
+      document.querySelectorAll(`[data-sort-list="${listName}"]`).forEach(btn => {
+        btn.classList.toggle('sort-btn-active', btn.dataset.sort === sort);
+      });
+      const entries = listCache[listName];
+      if (!entries) return;
+      const container = document.getElementById('list-' + listName);
+      container.innerHTML = sortEntries(entries, sort).map(e => renderListCard(e, listName)).join('');
+    }
+
+    // ── Star rating ────────────────────────────────────────────────────────
+    async function handleRating(googleBookId, listName, rating, star) {
+      try {
+        await updateBookMeta(googleBookId, listName, { rating });
+        const row = star.closest('.star-row');
+        row.querySelectorAll('.star').forEach((s, i) => {
+          s.classList.toggle('star-filled', i < rating);
+        });
+        // Update cache
+        const entry = (listCache[listName] || []).find(e => e.google_book_id === googleBookId);
+        if (entry) entry.rating = rating;
+      } catch (err) {
+        showToast('Error saving rating');
+      }
+    }
+
+    // ── Notes ──────────────────────────────────────────────────────────────
+    function toggleNote(btn) {
+      const card   = btn.closest('.book-card');
+      const editor = card.querySelector('.note-editor');
+      const isOpen = editor.style.display !== 'none';
+      editor.style.display = isOpen ? 'none' : 'block';
+      if (!isOpen) {
+        editor.querySelector('textarea').focus();
+        btn.textContent = 'Cancel';
+      } else {
+        const noteDisplay = card.querySelector('.book-note');
+        btn.textContent = noteDisplay ? 'Edit note' : '+ Add note';
+      }
+    }
+
+    async function saveNote(googleBookId, listName, saveBtn) {
+      const card    = saveBtn.closest('.book-card');
+      const textarea = card.querySelector('.note-textarea');
+      const notes   = textarea.value.trim();
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        await updateBookMeta(googleBookId, listName, { notes });
+        // Update displayed note
+        let noteDisplay = card.querySelector('.book-note');
+        const toggleBtn = card.querySelector('.note-btn');
+        const editor    = card.querySelector('.note-editor');
+        if (notes) {
+          if (noteDisplay) {
+            noteDisplay.textContent = notes;
+          } else {
+            noteDisplay = document.createElement('div');
+            noteDisplay.className = 'book-note';
+            noteDisplay.textContent = notes;
+            editor.insertAdjacentElement('beforebegin', noteDisplay);
+          }
+          toggleBtn.textContent = 'Edit note';
+        } else {
+          if (noteDisplay) noteDisplay.remove();
+          toggleBtn.textContent = '+ Add note';
+        }
+        editor.style.display = 'none';
+        // Update cache
+        const entry = (listCache[listName] || []).find(e => e.google_book_id === googleBookId);
+        if (entry) entry.notes = notes;
+        showToast('Note saved');
+      } catch (err) {
+        showToast('Error saving note');
+      }
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
+
     async function loadList(listName) {
       const container = document.getElementById('list-' + listName);
       const countEl   = document.getElementById('count-' + listName);
@@ -282,7 +393,7 @@
               <p>Search for books and add them here</p>
             </div>`;
         } else {
-          container.innerHTML = entries.map(e => renderListCard(e, listName)).join('');
+          container.innerHTML = sortEntries(entries, listSort[listName]).map(e => renderListCard(e, listName)).join('');
         }
       } catch (err) {
         container.innerHTML = `<div class="empty-state"><h3>Error loading list</h3><p>${escHtml(err.message)}</p></div>`;
@@ -358,7 +469,8 @@
           published_date: card.querySelector('.book-year')?.textContent || '',
         };
 
-        await addToList(book, toList);
+        const extra = toList === 'read' ? { finished_at: new Date().toISOString() } : {};
+        await addToList(book, toList, extra);
         await removeFromList(googleBookId, fromList);
 
         if (!myLists[googleBookId]) myLists[googleBookId] = new Set();
