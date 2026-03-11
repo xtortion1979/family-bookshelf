@@ -67,6 +67,10 @@
       <button class="sort-btn sort-btn-active" data-sort-list="to-read" data-sort="newest" onclick="setSortOrder('to-read','newest')">Newest</button>
       <button class="sort-btn" data-sort-list="to-read" data-sort="az" onclick="setSortOrder('to-read','az')">A–Z</button>
       <button class="sort-btn" data-sort-list="to-read" data-sort="author" onclick="setSortOrder('to-read','author')">Author</button>
+      <div class="view-toggle-wrap">
+        <button class="view-toggle-btn view-toggle-active" id="view-toggle-list-to-read" onclick="setViewMode('to-read','list')" title="List view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <button class="view-toggle-btn" id="view-toggle-grid-to-read" onclick="setViewMode('to-read','grid')" title="Cover grid"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg></button>
+      </div>
     </div>
     <div id="list-to-read" class="results-grid"></div>
   </div>
@@ -94,6 +98,10 @@
       <button class="sort-btn sort-btn-active" data-sort-list="purchased" data-sort="newest" onclick="setSortOrder('purchased','newest')">Newest</button>
       <button class="sort-btn" data-sort-list="purchased" data-sort="az" onclick="setSortOrder('purchased','az')">A–Z</button>
       <button class="sort-btn" data-sort-list="purchased" data-sort="author" onclick="setSortOrder('purchased','author')">Author</button>
+      <div class="view-toggle-wrap">
+        <button class="view-toggle-btn view-toggle-active" id="view-toggle-list-purchased" onclick="setViewMode('purchased','list')" title="List view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <button class="view-toggle-btn" id="view-toggle-grid-purchased" onclick="setViewMode('purchased','grid')" title="Cover grid"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg></button>
+      </div>
     </div>
     <div id="list-purchased" class="results-grid"></div>
   </div>
@@ -122,6 +130,10 @@
       <button class="sort-btn" data-sort-list="read" data-sort="az" onclick="setSortOrder('read','az')">A–Z</button>
       <button class="sort-btn" data-sort-list="read" data-sort="author" onclick="setSortOrder('read','author')">Author</button>
       <button class="sort-btn" data-sort-list="read" data-sort="rating" onclick="setSortOrder('read','rating')">Rating</button>
+      <div class="view-toggle-wrap">
+        <button class="view-toggle-btn view-toggle-active" id="view-toggle-list-read" onclick="setViewMode('read','list')" title="List view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <button class="view-toggle-btn" id="view-toggle-grid-read" onclick="setViewMode('read','grid')" title="Cover grid"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg></button>
+      </div>
     </div>
     <div id="list-read" class="results-grid"></div>
   </div>
@@ -299,6 +311,27 @@
     let searchCache  = [];          // last search results
     let listCache    = {};          // { listName: entries[] }
 
+    // Load saved view modes or default to 'list'
+    const listViewModes = JSON.parse(localStorage.getItem('listViewModes') || '{}');
+    ['to-read','purchased','read'].forEach(l => { if (!listViewModes[l]) listViewModes[l] = 'list'; });
+
+    function setViewMode(listName, mode) {
+      listViewModes[listName] = mode;
+      localStorage.setItem('listViewModes', JSON.stringify(listViewModes));
+      document.getElementById(`view-toggle-list-${listName}`).classList.toggle('view-toggle-active', mode === 'list');
+      document.getElementById(`view-toggle-grid-${listName}`).classList.toggle('view-toggle-active', mode === 'grid');
+      loadList(listName);
+    }
+
+    // Apply saved toggle states on load
+    ['to-read','purchased','read'].forEach(l => {
+      const m = listViewModes[l];
+      if (m === 'grid') {
+        document.getElementById(`view-toggle-list-${l}`)?.classList.remove('view-toggle-active');
+        document.getElementById(`view-toggle-grid-${l}`)?.classList.add('view-toggle-active');
+      }
+    });
+
     // ── Init ───────────────────────────────────────────────────────────────
     (async () => {
       currentUser = await requireAuth();
@@ -358,10 +391,13 @@
     function filterList(listName, query) {
       const q = query.toLowerCase().trim();
       const container = document.getElementById('list-' + listName);
-      const cards = container.querySelectorAll('.book-card');
-      cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = (!q || text.includes(q)) ? '' : 'none';
+      // Filter list cards or grid items
+      const items = container.querySelectorAll('.book-card, .cover-grid-item');
+      items.forEach(item => {
+        const id = item.dataset.id || item.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || '';
+        const entry = (listCache[listName] || []).find(e => e.google_book_id === id);
+        const text = entry ? `${entry.title} ${entry.authors}`.toLowerCase() : item.textContent.toLowerCase();
+        item.style.display = (!q || text.includes(q)) ? '' : 'none';
       });
     }
 
@@ -477,7 +513,14 @@
               <p>Search for books and add them here</p>
             </div>`;
         } else {
-          container.innerHTML = sortEntries(entries, listSort[listName]).map(e => renderListCard(e, listName)).join('');
+          const sorted = sortEntries(entries, listSort[listName]);
+          if (listViewModes[listName] === 'grid') {
+            container.className = '';
+            container.innerHTML = renderCoverGrid(sorted, listName);
+          } else {
+            container.className = 'results-grid';
+            container.innerHTML = sorted.map(e => renderListCard(e, listName)).join('');
+          }
         }
       } catch (err) {
         container.innerHTML = `<div class="empty-state"><h3>Error loading list</h3><p>${escHtml(err.message)}</p></div>`;

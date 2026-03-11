@@ -297,6 +297,26 @@ function renderListCard(entry, listName) {
   </div>`;
 }
 
+// Render cover grid view
+function renderCoverGrid(entries, listName) {
+  if (!entries.length) return '<div class="empty-state"><h3>No books yet</h3></div>';
+  return `<div class="cover-grid">${entries.map(entry => {
+    const id = escHtml(entry.google_book_id);
+    const rating = entry.rating || 0;
+    const ratingDots = rating ? `<div class="cover-grid-rating">${'★'.repeat(rating)}</div>` : '';
+    const progress = listName === 'purchased' && entry.current_page && entry.total_pages
+      ? `<div class="cover-grid-progress" style="width:${Math.min(Math.round(entry.current_page/entry.total_pages*100),100)}%"></div>`
+      : '';
+    return `<div class="cover-grid-item" data-id="${id}" onclick="openDetail('${id}','${listName}')">
+      ${entry.thumbnail
+        ? `<img src="${escHtml(entry.thumbnail)}" alt="${escHtml(entry.title)}" loading="lazy">`
+        : `<div class="cover-grid-ph"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg></div>`}
+      ${ratingDots}
+      ${progress ? `<div class="cover-grid-progress-track">${progress}</div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
 function escHtml(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;')
