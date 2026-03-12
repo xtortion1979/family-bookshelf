@@ -87,21 +87,23 @@ async function getList(listName) {
 
 async function ensureShareCode() {
   const userId = (await getSupabase().auth.getUser()).data.user.id;
-  const { data } = await getSupabase().from('profiles').select('share_code').eq('id', userId).single();
+  const { data, error: selErr } = await getSupabase().from('profiles').select('share_code').eq('id', userId).single();
+  if (selErr) throw new Error('Could not load profile: ' + selErr.message);
   if (data?.share_code) return data.share_code;
-  // Generate a 6-char code (no ambiguous chars)
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const code = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  await getSupabase().from('profiles').update({ share_code: code }).eq('id', userId);
+  const { error: updErr } = await getSupabase().from('profiles').update({ share_code: code }).eq('id', userId);
+  if (updErr) throw new Error('Could not save share code: ' + updErr.message);
   return code;
 }
 
 async function findUserByShareCode(code) {
-  const { data } = await getSupabase()
+  const { data, error } = await getSupabase()
     .from('profiles')
     .select('id, name, share_code')
     .eq('share_code', code.toUpperCase().trim())
-    .single();
+    .maybeSingle();
+  if (error) throw new Error('Lookup failed: ' + error.message);
   return data || null;
 }
 
