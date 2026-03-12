@@ -1436,8 +1436,30 @@
 
     async function detailMove(googleBookId, fromList, toList) {
       closeDetail();
-      const fakeBtn = { disabled: false, textContent: '', closest: () => null };
-      await handleMove(googleBookId, fromList, toList, fakeBtn);
+      try {
+        const entry = _detailEntry;
+        const book = {
+          google_book_id: entry.google_book_id,
+          title:          entry.title,
+          authors:        entry.authors || '',
+          thumbnail:      entry.thumbnail || null,
+          description:    entry.description || '',
+          published_date: entry.published_date || '',
+        };
+        const extra = toList === 'read' ? { finished_at: new Date().toISOString() } : {};
+        await addToList(book, toList, extra);
+        await removeFromList(googleBookId, fromList);
+        if (!myLists[googleBookId]) myLists[googleBookId] = new Set();
+        myLists[googleBookId].add(toList);
+        myLists[googleBookId].delete(fromList);
+        delete listCache[fromList];
+        delete listCache[toList];
+        loadList(fromList);
+        loadList(toList);
+        showToast(`Moved to ${LIST_LABELS[toList].label}`);
+      } catch (err) {
+        showToast('Error: ' + err.message);
+      }
     }
 
     async function detailRemove(googleBookId, listName) {
