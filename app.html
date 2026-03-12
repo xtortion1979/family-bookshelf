@@ -485,16 +485,18 @@
     async function doSearch() {
       const raw = document.getElementById('search-input').value.trim();
       if (!raw) return;
-      // If input looks like an ISBN (digits/hyphens starting with 978 or 979), use isbn: prefix
       const digits = raw.replace(/[-\s]/g, '');
-      const q = (digits.length >= 10 && (digits.startsWith('978') || digits.startsWith('979')))
-        ? `isbn:${digits}`
-        : raw;
+      const isIsbn = digits.length >= 10 && (digits.startsWith('978') || digits.startsWith('979'));
+      const q = isIsbn ? `isbn:${digits}` : raw;
       const el = document.getElementById('search-results');
       document.getElementById('recent-section').style.display = 'none';
       el.innerHTML = '<div class="loading-row"><span class="spinner"></span> Searching…</div>';
       try {
         searchCache = await searchBooks(q);
+        // If Google Books found nothing for an ISBN, try Open Library (covers 979-8 Amazon KDP books)
+        if (!searchCache.length && isIsbn) {
+          searchCache = await searchOpenLibrary(digits);
+        }
         if (!searchCache.length) {
           el.innerHTML = `<div class="empty-state"><h3>No results found</h3><p>Try a different title or author</p></div>`;
           return;
@@ -503,6 +505,26 @@
       } catch (err) {
         el.innerHTML = `<div class="empty-state"><h3>Search failed</h3><p>${escHtml(err.message)}</p></div>`;
       }
+    }
+
+    async function searchOpenLibrary(isbn) {
+      try {
+        const resp = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        const book = data[`ISBN:${isbn}`];
+        if (!book) return [];
+        let thumbnail = book.cover?.large || book.cover?.medium || book.cover?.small || null;
+        return [{
+          google_book_id: `ol_${isbn}`,
+          title: book.title || 'Unknown Title',
+          authors: (book.authors || []).map(a => a.name).join(', ') || 'Unknown Author',
+          description: book.excerpts?.[0]?.text || '',
+          thumbnail,
+          published_date: book.publish_date || '',
+          page_count: book.number_of_pages || null,
+        }];
+      } catch { return []; }
     }
 
     function showSearchHint() { /* replaced by loadRecentlyAdded */ }
