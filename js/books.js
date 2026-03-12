@@ -29,6 +29,7 @@ function normalizeBook(item) {
     description:    info.description   || '',
     thumbnail,
     published_date: info.publishedDate || '',
+    page_count:     info.pageCount     || null,
   };
 }
 
