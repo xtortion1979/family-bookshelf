@@ -229,11 +229,7 @@
         </label>
         <input type="file" id="manual-cover-input" accept="image/*" style="display:none" onchange="previewCover(this)">
         <div style="font-size:.8rem;color:var(--gray-500);margin-top:-.25rem">Add to list:</div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          ${Object.entries(LIST_LABELS).map(([k, mi]) =>
-            `<button class="sort-btn" data-list="${k}" onclick="addManualBook('${k}')">${mi.label}</button>`
-          ).join('')}
-        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="manual-list-btns"></div>
         <p id="manual-status" style="font-size:.8rem;color:#dc2626;min-height:1rem"></p>
       </div>
     </div>
@@ -641,6 +637,9 @@
       document.getElementById('manual-cover-input').value = '';
       document.getElementById('manual-cover-preview').style.display = 'none';
       document.getElementById('manual-cover-hint').style.display = '';
+      document.getElementById('manual-list-btns').innerHTML = Object.entries(LIST_LABELS)
+        .map(([k, mi]) => `<button class="sort-btn" onclick="addManualBook('${k}')">${mi.label}</button>`)
+        .join('');
       document.getElementById('manual-entry-modal').classList.add('open');
       setTimeout(() => document.getElementById('manual-title').focus(), 100);
     }
