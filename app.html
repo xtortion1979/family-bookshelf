@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=2">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body class="app-page">
@@ -2637,9 +2637,13 @@
     let _obSlide = 0;
     const OB_COUNT = 4;
 
-    function checkOnboarding() {
+    async function checkOnboarding() {
       if (!currentUser) return;
-      if (localStorage.getItem('onboarding_' + currentUser.id) === 'done') return;
+      const key = 'onboarding_' + currentUser.id;
+      if (localStorage.getItem(key) === 'done') return;
+      // Auto-skip for existing users who already have books
+      const hasBooks = Object.keys(myLists).length > 0;
+      if (hasBooks) { localStorage.setItem(key, 'done'); return; }
       _obSlide = 0;
       _obUpdateSlide();
       document.getElementById('onboarding-overlay').classList.add('open');
