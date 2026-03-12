@@ -692,7 +692,7 @@
 
         statusEl.textContent = 'Adding to list…';
         const book = { google_book_id: bookId, title, authors: author, description: desc, thumbnail: thumbnailUrl, published_date: '', page_count: pages };
-        await addBookToList(book, listName);
+        await addToList(book, listName);
         delete listCache[listName];
         myLists[bookId] = (myLists[bookId] || new Set());
         myLists[bookId].add(listName);
