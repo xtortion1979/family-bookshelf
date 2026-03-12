@@ -158,11 +158,21 @@ async function getIncomingRecommendations() {
   const userId = (await getSupabase().auth.getUser()).data.user.id;
   const { data, error } = await getSupabase()
     .from('recommendations')
-    .select('*, sender:profiles!recommendations_sender_id_fkey(name)')
+    .select('*')
     .eq('receiver_id', userId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data || [];
+  const recs = data || [];
+  if (!recs.length) return recs;
+
+  // Fetch sender names from profiles
+  const senderIds = [...new Set(recs.map(r => r.sender_id))];
+  const { data: profiles } = await getSupabase()
+    .from('profiles')
+    .select('id, name')
+    .in('id', senderIds);
+  const nameMap = Object.fromEntries((profiles || []).map(p => [p.id, p.name]));
+  return recs.map(r => ({ ...r, sender: { name: nameMap[r.sender_id] || 'Someone' } }));
 }
 
 async function markRecommendationSeen(id) {
