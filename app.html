@@ -1657,7 +1657,7 @@
         ${entry.description ? `
         <div class="detail-section">
           <div class="detail-section-label">Description</div>
-          <p class="detail-desc">${escHtml(entry.description)}</p>
+          <p class="detail-desc">${escHtml(entry.description.replace(/<[^>]*>/g, ' ').replace(/\s{2,}/g, ' ').trim())}</p>
         </div>` : ''}
 
         ${listName === 'purchased' ? `
