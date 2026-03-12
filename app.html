@@ -209,23 +209,6 @@
     </div>
   </div>
 
-  <!-- Recommend modal -->
-  <div id="recommend-modal" class="modal-overlay" onclick="if(event.target===this)closeRecommend()">
-    <div class="scanner-sheet">
-      <div class="scanner-header">
-        <span class="scanner-title">Recommend to Friend</span>
-        <button class="scanner-close" onclick="closeRecommend()">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-      <div id="recommend-book-info" class="rec-book-info"></div>
-      <div id="recommend-friends-list" class="rec-friends-list"></div>
-      <textarea id="recommend-note" class="note-textarea" placeholder="Add a note (optional)…" rows="2" style="margin:0.75rem 0 0.5rem"></textarea>
-      <button class="scanner-isbn-btn" style="width:100%" onclick="submitRecommend()">Send Recommendation</button>
-      <p id="recommend-status" class="scanner-status"></p>
-    </div>
-  </div>
-
   <!-- Bottom navigation -->
   <nav class="bottom-nav">
     <button class="nav-item active" id="nav-search" onclick="switchView('search')">
@@ -313,6 +296,23 @@
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
       <div id="detail-content"></div>
+    </div>
+  </div>
+
+  <!-- Recommend modal (must be after detail-modal in DOM to render on top) -->
+  <div id="recommend-modal" class="modal-overlay" onclick="if(event.target===this)closeRecommend()">
+    <div class="scanner-sheet">
+      <div class="scanner-header">
+        <span class="scanner-title">Recommend to Friend</span>
+        <button class="scanner-close" onclick="closeRecommend()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="recommend-book-info" class="rec-book-info"></div>
+      <div id="recommend-friends-list" class="rec-friends-list"></div>
+      <textarea id="recommend-note" class="note-textarea" placeholder="Add a note (optional)…" rows="2" style="margin:0.75rem 0 0.5rem"></textarea>
+      <button class="scanner-isbn-btn" style="width:100%" onclick="submitRecommend()">Send Recommendation</button>
+      <p id="recommend-status" class="scanner-status"></p>
     </div>
   </div>
 
