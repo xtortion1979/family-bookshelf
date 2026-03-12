@@ -1974,51 +1974,52 @@ body {
 /* ── New Releases ────────────────────────────────────────────────────────── */
 .nr-genre-tabs {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.5rem;
   overflow-x: auto;
   scrollbar-width: none;
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.6rem;
   margin-bottom: 0.75rem;
 }
 .nr-genre-tabs::-webkit-scrollbar { display: none; }
 .nr-tab {
   flex-shrink: 0;
-  padding: 0.3rem 0.85rem;
+  padding: 0.4rem 1rem;
   border-radius: 999px;
-  border: 1.5px solid var(--gray-200);
-  background: transparent;
+  border: none;
+  background: var(--gray-100);
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--gray-500);
+  color: var(--gray-400);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.01em;
 }
 .nr-tab.active {
-  background: var(--blue-600);
-  border-color: var(--blue-600);
+  background: var(--blue);
   color: #fff;
 }
 .nr-tab:hover:not(.active) {
-  border-color: var(--blue-400);
-  color: var(--blue-600);
+  background: var(--gray-200);
+  color: var(--text);
 }
 .nr-scroll { padding-bottom: 0.75rem; }
 .nr-card {
   flex-shrink: 0;
-  width: 90px;
+  width: 92px;
   cursor: pointer;
   text-align: center;
 }
 .nr-cover {
-  width: 90px;
-  height: 126px;
+  width: 92px;
+  height: 130px;
   object-fit: cover;
-  border-radius: 7px;
+  border-radius: 8px;
   display: block;
   background: var(--gray-100);
   box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   transition: transform 0.15s, box-shadow 0.15s;
 }
+.nr-card:active .nr-cover,
 .nr-card:hover .nr-cover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0,0,0,0.18);
@@ -2026,7 +2027,7 @@ body {
 .nr-title {
   font-size: 0.68rem;
   font-weight: 600;
-  color: var(--gray-700);
+  color: var(--text);
   margin: 0.35rem 0 0.15rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -2044,16 +2045,22 @@ body {
 }
 .nr-in-list {
   font-size: 0.6rem;
-  color: var(--blue-500);
+  color: var(--blue-light);
   font-weight: 700;
   margin-top: 0.2rem;
+}
+.nr-hint {
+  font-size: 0.8rem;
+  color: var(--gray-400);
+  padding: 0.75rem 0 0.5rem;
+  font-style: italic;
 }
 .nr-loading {
   font-size: 0.8rem;
   color: var(--gray-400);
-  padding: 1rem 0;
+  padding: 0.75rem 0 0.5rem;
 }
-[data-theme="dark"] .nr-tab { border-color: #334155; color: #94a3b8; }
-[data-theme="dark"] .nr-tab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
-[data-theme="dark"] .nr-title { color: #e2e8f0; }
+[data-theme="dark"] .nr-tab { background: #1e293b; color: #94a3b8; }
+[data-theme="dark"] .nr-tab.active { background: var(--blue); color: #fff; }
+[data-theme="dark"] .nr-tab:hover:not(.active) { background: #334155; color: #e2e8f0; }
 [data-theme="dark"] .nr-cover { box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
