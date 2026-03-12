@@ -1088,7 +1088,13 @@
     // ── Shop for book ──────────────────────────────────────────────────────
     function shopForBook(title, authors) {
       const q = encodeURIComponent(`${title} ${authors} buy book`);
-      window.open(`https://www.google.com/search?q=${q}`, '_blank');
+      const a = document.createElement('a');
+      a.href = `https://www.google.com/search?q=${q}`;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
 
     // ── Recommend to friend ────────────────────────────────────────────────
@@ -1119,7 +1125,11 @@
         const profiles = await getAllProfiles();
         const friends = profiles.filter(p => p.id !== currentUser.id);
         if (!friends.length) {
-          listEl.innerHTML = '<p style="color:var(--gray-400);font-size:.875rem;padding:.5rem 0">No friends connected yet.</p>';
+          listEl.innerHTML = `<div style="text-align:center;padding:1rem 0;color:var(--gray-400);font-size:.875rem">
+            <div style="font-size:1.5rem;margin-bottom:.4rem">👥</div>
+            No friends connected yet.<br>
+            <button onclick="closeRecommend();openAddFamily()" style="margin-top:.6rem;background:none;border:none;color:var(--blue);font-size:.875rem;font-weight:600;cursor:pointer;font-family:inherit">Add a friend →</button>
+          </div>`;
           return;
         }
         listEl.innerHTML = friends.map(p =>

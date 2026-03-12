@@ -1214,6 +1214,7 @@ body {
   justify-content: center;
 }
 .modal-overlay.open { display: flex; }
+#recommend-modal { z-index: 500; }
 .scanner-sheet {
   background: #fff;
   border-radius: var(--radius) var(--radius) 0 0;
