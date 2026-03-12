@@ -33,6 +33,24 @@ function normalizeBook(item) {
   };
 }
 
+// ── Activity logging ──────────────────────────────────────────────────────
+
+function logActivity(type, book, listName = null) {
+  // Fire-and-forget — never blocks the user action
+  getSupabase().auth.getUser().then(({ data }) => {
+    if (!data?.user) return;
+    getSupabase().from('activity').insert({
+      user_id:        data.user.id,
+      type,
+      google_book_id: book.google_book_id,
+      title:          book.title,
+      authors:        book.authors || '',
+      thumbnail:      book.thumbnail || null,
+      list_name:      listName,
+    }).then(({ error }) => { if (error) console.warn('Activity log:', error.message); });
+  });
+}
+
 // ── Supabase list helpers ─────────────────────────────────────────────────
 
 async function addToList(book, listName, extra = {}) {

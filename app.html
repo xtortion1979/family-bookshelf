@@ -357,6 +357,63 @@
   </div>
 
   <!-- Recommend modal (must be after detail-modal in DOM to render on top) -->
+  <!-- Create Club modal -->
+  <div id="create-club-modal" class="modal-overlay" onclick="if(event.target===this)closeCreateClub()">
+    <div class="scanner-sheet">
+      <div class="scanner-header">
+        <span class="scanner-title">Create Book Club</span>
+        <button class="scanner-close" onclick="closeCreateClub()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <p class="scanner-hint">Choose a name for your club. An invite code will be generated automatically.</p>
+      <div class="scanner-manual-row">
+        <input type="text" id="create-club-name" class="scanner-isbn-input" placeholder="Club name…" maxlength="60" autocomplete="off" onkeydown="if(event.key==='Enter')submitCreateClub()">
+        <button class="scanner-isbn-btn" onclick="submitCreateClub()">Create</button>
+      </div>
+      <p id="create-club-status" class="scanner-status"></p>
+    </div>
+  </div>
+
+  <!-- Join Club modal -->
+  <div id="join-club-modal" class="modal-overlay" onclick="if(event.target===this)closeJoinClub()">
+    <div class="scanner-sheet">
+      <div class="scanner-header">
+        <span class="scanner-title">Join Book Club</span>
+        <button class="scanner-close" onclick="closeJoinClub()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <p class="scanner-hint">Enter the 6-character invite code from the club creator.</p>
+      <div class="scanner-manual-row">
+        <input type="text" id="join-club-code" class="scanner-isbn-input family-code-input" placeholder="ABC123" maxlength="6" autocomplete="off" autocorrect="off" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')submitJoinClub()">
+        <button class="scanner-isbn-btn" onclick="submitJoinClub()">Join</button>
+      </div>
+      <p id="join-club-status" class="scanner-status"></p>
+    </div>
+  </div>
+
+  <!-- Club detail full-screen overlay -->
+  <div id="club-detail-sheet" class="club-detail-overlay" onclick="if(event.target===this)closeClubDetail()">
+    <div class="club-detail-panel">
+      <div class="club-detail-topbar">
+        <button class="scanner-close" onclick="closeClubDetail()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <span style="font-size:.95rem;font-weight:700">Book Club</span>
+        <div style="width:32px"></div>
+      </div>
+      <div id="club-detail-content" style="overflow-y:auto;flex:1;padding:1rem"></div>
+      <div id="club-book-search-area" style="display:none;padding:.75rem 1rem;border-top:1px solid var(--gray-200)">
+        <div class="scanner-manual-row" style="margin-bottom:.5rem">
+          <input type="search" id="club-book-search-input" class="scanner-isbn-input" placeholder="Search for a book…" autocomplete="off" onkeydown="if(event.key==='Enter')doClubBookSearch()">
+          <button class="scanner-isbn-btn" onclick="doClubBookSearch()">Search</button>
+        </div>
+        <div id="club-book-search-results"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="recommend-modal" class="modal-overlay" onclick="if(event.target===this)closeRecommend()">
     <div class="scanner-sheet">
       <div class="scanner-header">
@@ -852,6 +909,7 @@
       try {
         const extra = listName === 'purchased' && book.page_count ? { total_pages: book.page_count } : {};
         await addToList(book, listName, extra);
+        logActivity(listName === 'read' ? 'finished_book' : 'added_book', book, listName);
 
         // Update local state
         if (!myLists[googleBookId]) myLists[googleBookId] = new Set();
@@ -1332,6 +1390,7 @@
       btn.disabled = true;
       try {
         await updateBookMeta(googleBookId, 'purchased', { currently_reading: newVal });
+        if (newVal) logActivity('started_reading', entry, 'purchased');
         entry.currently_reading = newVal;
         const cached = (listCache['purchased'] || []).find(e => e.google_book_id === googleBookId);
         if (cached) cached.currently_reading = newVal;
@@ -1668,6 +1727,9 @@
 
         let html = '';
 
+        // Activity feed
+        html += await loadActivityFeed();
+
         // Recommendations
         if (recs.length) {
           html += `<div class="rec-section">
@@ -1700,6 +1762,9 @@
           fp.sort((a,b) => (a.name||'').localeCompare(b.name||''));
           html += fp.map(p => renderFollowerCard(p, followingIds.includes(p.id))).join('');
         }
+
+        // Book clubs section
+        html += await loadBookClubsSection();
 
         container.innerHTML = html;
       } catch (err) {
@@ -1778,6 +1843,326 @@
         showToast(`${name} removed from followers`);
         loadFamily();
       } catch (err) { showToast('Error: ' + err.message); }
+    }
+
+    // ── Activity feed ──────────────────────────────────────────────────────
+
+    function formatTimeAgo(isoString) {
+      const diff = Date.now() - new Date(isoString).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1)  return 'just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24)  return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      if (days < 7)  return `${days}d ago`;
+      return new Date(isoString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    async function loadActivityFeed() {
+      try {
+        const sb = getSupabase();
+        const { data, error } = await sb.from('activity')
+          .select('*').order('created_at', { ascending: false }).limit(30);
+        if (error || !data || !data.length) return '';
+        const userIds = [...new Set(data.map(a => a.user_id))];
+        const { data: profiles } = await sb.from('profiles').select('id, name').in('id', userIds);
+        const nameMap = Object.fromEntries((profiles || []).map(p => [p.id, p.name || 'Someone']));
+        const rows = data.map(a => {
+          const name = escHtml(nameMap[a.user_id] || 'Someone');
+          const initial = (nameMap[a.user_id] || '?').charAt(0).toUpperCase();
+          const title = escHtml(a.title || '');
+          const timeAgo = formatTimeAgo(a.created_at);
+          const actionText = a.type === 'finished_book' ? `finished <strong>${title}</strong>`
+            : a.type === 'started_reading' ? `started reading <strong>${title}</strong>`
+            : `added <strong>${title}</strong>`;
+          return `<div class="activity-item">
+            <div class="activity-avatar">${initial}</div>
+            <div class="activity-body">
+              <div class="activity-text"><strong>${name}</strong> ${actionText}</div>
+              <div class="activity-time">${timeAgo}</div>
+            </div>
+            ${a.thumbnail ? `<img class="activity-thumb" src="${escHtml(a.thumbnail)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+          </div>`;
+        }).join('');
+        return `<div class="activity-section">
+          <div class="friends-section-title" style="border-top:none;margin-top:0;padding-top:.25rem">Activity</div>
+          ${rows}
+        </div>`;
+      } catch { return ''; }
+    }
+
+    // ── Book clubs ─────────────────────────────────────────────────────────
+
+    let _currentClubId = null;
+
+    async function loadBookClubsSection() {
+      try {
+        const sb = getSupabase();
+        const { data: memberships } = await sb.from('book_club_members').select('club_id').eq('user_id', currentUser.id);
+        const clubIds = (memberships || []).map(m => m.club_id);
+        let clubs = [];
+        if (clubIds.length) {
+          const { data: clubData } = await sb.from('book_clubs').select('*').in('id', clubIds);
+          const { data: memberCounts } = await sb.from('book_club_members').select('club_id').in('club_id', clubIds);
+          const countMap = {};
+          (memberCounts || []).forEach(m => { countMap[m.club_id] = (countMap[m.club_id] || 0) + 1; });
+          clubs = (clubData || []).map(c => ({ ...c, memberCount: countMap[c.id] || 1 }));
+        }
+        const clubCards = clubs.map(c => `
+          <div class="club-card" onclick="openClubDetail('${escHtml(c.id)}')">
+            ${c.current_book_thumbnail
+              ? `<img class="club-book-cover" src="${escHtml(c.current_book_thumbnail)}" alt="" loading="lazy">`
+              : `<div class="club-book-cover-ph"></div>`}
+            <div class="club-card-body">
+              <div class="club-card-name">${escHtml(c.name)}</div>
+              <div class="club-card-meta">${c.memberCount} member${c.memberCount !== 1 ? 's' : ''}${c.current_book_title ? ` · ${escHtml(c.current_book_title)}` : ''}</div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style="flex-shrink:0;color:var(--gray-400)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </div>`).join('');
+        return `<div class="clubs-section">
+          <div class="friends-section-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Book Clubs</span>
+            <div style="display:flex;gap:.4rem">
+              <button class="sort-btn" onclick="openCreateClub()">+ Create</button>
+              <button class="sort-btn" onclick="openJoinClub()">Join</button>
+            </div>
+          </div>
+          ${clubs.length ? clubCards : '<p class="family-empty" style="padding:.25rem 0 .75rem">No clubs yet. Create one or join with an invite code.</p>'}
+        </div>`;
+      } catch { return ''; }
+    }
+
+    function openCreateClub() {
+      document.getElementById('create-club-name').value = '';
+      document.getElementById('create-club-status').textContent = '';
+      document.getElementById('create-club-modal').classList.add('open');
+      setTimeout(() => document.getElementById('create-club-name').focus(), 150);
+    }
+    function closeCreateClub() { document.getElementById('create-club-modal').classList.remove('open'); }
+
+    async function submitCreateClub() {
+      const name = document.getElementById('create-club-name').value.trim();
+      const statusEl = document.getElementById('create-club-status');
+      if (!name) { statusEl.textContent = 'Club name is required.'; return; }
+      if (name.length > 60) { statusEl.textContent = 'Name must be 60 characters or less.'; return; }
+      statusEl.textContent = 'Creating…';
+      try {
+        const sb = getSupabase();
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const code = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        const { data: club, error: cErr } = await sb.from('book_clubs')
+          .insert({ name, invite_code: code, created_by: currentUser.id }).select().single();
+        if (cErr) throw new Error(cErr.message);
+        await sb.from('book_club_members').insert({ club_id: club.id, user_id: currentUser.id });
+        closeCreateClub();
+        showToast(`Club "${name}" created!`);
+        loadFamily();
+      } catch (err) { statusEl.textContent = 'Error: ' + err.message; }
+    }
+
+    function openJoinClub() {
+      document.getElementById('join-club-code').value = '';
+      document.getElementById('join-club-status').textContent = '';
+      document.getElementById('join-club-modal').classList.add('open');
+      setTimeout(() => document.getElementById('join-club-code').focus(), 150);
+    }
+    function closeJoinClub() { document.getElementById('join-club-modal').classList.remove('open'); }
+
+    async function submitJoinClub() {
+      const code = document.getElementById('join-club-code').value.trim().toUpperCase();
+      const statusEl = document.getElementById('join-club-status');
+      if (code.length < 6) { statusEl.textContent = 'Enter the full 6-character invite code.'; return; }
+      statusEl.textContent = 'Looking up club…';
+      try {
+        const sb = getSupabase();
+        const { data: club, error: lookupErr } = await sb.from('book_clubs').select('id, name').eq('invite_code', code).maybeSingle();
+        if (lookupErr) throw new Error(lookupErr.message);
+        if (!club) { statusEl.textContent = 'Club not found. Check the code and try again.'; return; }
+        const { error: joinErr } = await sb.from('book_club_members')
+          .upsert({ club_id: club.id, user_id: currentUser.id }, { onConflict: 'club_id,user_id' });
+        if (joinErr) throw new Error(joinErr.message);
+        closeJoinClub();
+        showToast(`Joined "${club.name}"!`);
+        loadFamily();
+      } catch (err) { statusEl.textContent = err.message || 'Something went wrong.'; }
+    }
+
+    async function openClubDetail(clubId) {
+      _currentClubId = clubId;
+      document.getElementById('club-book-search-area').style.display = 'none';
+      document.getElementById('club-book-search-results').innerHTML = '';
+      document.getElementById('club-detail-sheet').classList.add('open');
+      document.getElementById('club-detail-content').innerHTML = '<div class="loading-row"><span class="spinner"></span> Loading…</div>';
+      try {
+        const sb = getSupabase();
+        const [{ data: club, error: cErr }, { data: members }, { data: notes }] = await Promise.all([
+          sb.from('book_clubs').select('*').eq('id', clubId).single(),
+          sb.from('book_club_members').select('user_id, joined_at').eq('club_id', clubId),
+          sb.from('book_club_notes').select('*').eq('club_id', clubId).order('created_at', { ascending: false }),
+        ]);
+        if (cErr) throw new Error(cErr.message);
+        const memberIds = [...new Set([...(members||[]).map(m => m.user_id), ...(notes||[]).map(n => n.user_id)])];
+        const { data: profiles } = await sb.from('profiles').select('id, name').in('id', memberIds);
+        const nameMap = Object.fromEntries((profiles||[]).map(p => [p.id, p.name || 'Someone']));
+        const isCreator = club.created_by === currentUser.id;
+
+        const membersHtml = (members||[]).map(m => {
+          const n = escHtml(nameMap[m.user_id] || 'Someone');
+          const ini = (nameMap[m.user_id]||'?').charAt(0).toUpperCase();
+          return `<div class="club-member-row">
+            <div class="activity-avatar" style="width:28px;height:28px;font-size:.75rem">${ini}</div>
+            <span class="club-member-name">${n}</span>
+            ${m.user_id === club.created_by ? '<span class="club-creator-badge">Owner</span>' : ''}
+          </div>`;
+        }).join('');
+
+        const notesHtml = (notes||[]).length ? (notes||[]).map(n => {
+          const nm = escHtml(nameMap[n.user_id] || 'Someone');
+          const ini = (nameMap[n.user_id]||'?').charAt(0).toUpperCase();
+          const canDel = n.user_id === currentUser.id || isCreator;
+          return `<div class="club-note-item">
+            <div class="activity-avatar" style="width:28px;height:28px;font-size:.75rem;flex-shrink:0">${ini}</div>
+            <div style="flex:1;min-width:0">
+              <div class="club-note-header">
+                <strong>${nm}</strong>
+                <span class="activity-time">${formatTimeAgo(n.created_at)}</span>
+                ${canDel ? `<button class="club-note-delete" onclick="deleteClubNote('${escHtml(n.id)}')">✕</button>` : ''}
+              </div>
+              <div class="club-note-text">${escHtml(n.note)}</div>
+            </div>
+          </div>`;
+        }).join('') : '<p class="family-empty">No notes yet. Start the discussion!</p>';
+
+        document.getElementById('club-detail-content').innerHTML = `
+          <div class="club-detail-header">
+            <div class="club-detail-name">${escHtml(club.name)}</div>
+            <div class="club-invite-row">Invite code: <span class="club-invite-code">${escHtml(club.invite_code)}</span>
+              <button class="my-code-copy" style="font-size:.7rem;padding:.2rem .5rem" onclick="copyClubCode('${escHtml(club.invite_code)}',this)">Copy</button>
+            </div>
+          </div>
+          <div class="club-current-book">
+            <div class="detail-section-label">Current Book</div>
+            ${club.current_book_id
+              ? `<div class="club-book-row" onclick="openFriendBook('${escHtml(club.current_book_id)}')">
+                  ${club.current_book_thumbnail ? `<img src="${escHtml(club.current_book_thumbnail)}" style="width:40px;height:56px;object-fit:cover;border-radius:4px;flex-shrink:0" alt="">` : ''}
+                  <div><div style="font-weight:700;font-size:.875rem">${escHtml(club.current_book_title||'')}</div>
+                  <div style="font-size:.75rem;color:var(--gray-400)">${escHtml(club.current_book_authors||'')}</div></div>
+                </div>`
+              : '<p class="family-empty" style="padding:.25rem 0">No book set yet.</p>'}
+            ${isCreator ? `<button class="sort-btn" style="margin-top:.5rem" onclick="toggleClubBookSearch()">Change Book</button>` : ''}
+          </div>
+          <div class="club-members-section">
+            <div class="detail-section-label">Members (${(members||[]).length})</div>
+            <div class="club-members-list">${membersHtml}</div>
+          </div>
+          <div class="club-notes-section">
+            <div class="detail-section-label">Discussion</div>
+            <div id="club-notes-list">${notesHtml}</div>
+            <div class="club-note-input-row">
+              <textarea id="club-note-input" class="note-textarea" placeholder="Add a note…" rows="2"></textarea>
+              <button class="scanner-isbn-btn" style="width:100%;margin-top:.4rem" onclick="postClubNote()">Post</button>
+            </div>
+          </div>
+          <div style="padding-top:.25rem;padding-bottom:1rem">
+            ${isCreator
+              ? `<button class="detail-remove-btn" style="width:100%" onclick="deleteClub('${escHtml(clubId)}')">Delete Club</button>`
+              : `<button class="detail-remove-btn" style="width:100%" onclick="leaveClub('${escHtml(clubId)}')">Leave Club</button>`}
+          </div>`;
+      } catch (err) {
+        document.getElementById('club-detail-content').innerHTML =
+          `<div class="empty-state"><h3>Error</h3><p>${escHtml(err.message)}</p></div>`;
+      }
+    }
+
+    function closeClubDetail() {
+      document.getElementById('club-detail-sheet').classList.remove('open');
+      _currentClubId = null;
+    }
+
+    function toggleClubBookSearch() {
+      const area = document.getElementById('club-book-search-area');
+      area.style.display = area.style.display === 'none' ? '' : 'none';
+    }
+
+    async function doClubBookSearch() {
+      const q = document.getElementById('club-book-search-input').value.trim();
+      if (!q) return;
+      const resultsEl = document.getElementById('club-book-search-results');
+      resultsEl.innerHTML = '<div class="loading-row"><span class="spinner"></span></div>';
+      try {
+        const results = await searchBooks(q, 5);
+        if (!results.length) { resultsEl.innerHTML = '<p class="family-empty">No results.</p>'; return; }
+        resultsEl.innerHTML = results.map(b => `
+          <div class="club-book-result" onclick="setClubCurrentBook('${escHtml(b.google_book_id)}','${escHtml(b.title)}','${escHtml(b.authors||'')}','${escHtml(b.thumbnail||'')}')">
+            ${b.thumbnail ? `<img src="${escHtml(b.thumbnail)}" style="width:36px;height:50px;object-fit:cover;border-radius:3px;flex-shrink:0" alt="">` : ''}
+            <div><div style="font-weight:600;font-size:.875rem">${escHtml(b.title)}</div>
+            <div style="font-size:.75rem;color:var(--gray-400)">${escHtml(b.authors||'')}</div></div>
+          </div>`).join('');
+      } catch (err) { resultsEl.innerHTML = `<p class="family-empty">${escHtml(err.message)}</p>`; }
+    }
+
+    async function setClubCurrentBook(bookId, title, authors, thumbnail) {
+      if (!_currentClubId) return;
+      try {
+        const { error } = await getSupabase().from('book_clubs').update({
+          current_book_id: bookId, current_book_title: title,
+          current_book_authors: authors, current_book_thumbnail: thumbnail || null,
+        }).eq('id', _currentClubId);
+        if (error) throw new Error(error.message);
+        document.getElementById('club-book-search-area').style.display = 'none';
+        showToast('Current book updated!');
+        openClubDetail(_currentClubId);
+      } catch (err) { showToast('Error: ' + err.message); }
+    }
+
+    async function postClubNote() {
+      if (!_currentClubId) return;
+      const textarea = document.getElementById('club-note-input');
+      const note = textarea.value.trim();
+      if (!note) return;
+      if (note.length > 1000) { showToast('Note too long (max 1000 characters).'); return; }
+      try {
+        const { error } = await getSupabase().from('book_club_notes')
+          .insert({ club_id: _currentClubId, user_id: currentUser.id, note });
+        if (error) throw new Error(error.message);
+        textarea.value = '';
+        openClubDetail(_currentClubId);
+      } catch (err) { showToast('Error: ' + err.message); }
+    }
+
+    async function deleteClubNote(noteId) {
+      if (!confirm('Delete this note?')) return;
+      try {
+        const { error } = await getSupabase().from('book_club_notes').delete().eq('id', noteId);
+        if (error) throw new Error(error.message);
+        openClubDetail(_currentClubId);
+      } catch (err) { showToast('Error deleting note.'); }
+    }
+
+    async function leaveClub(clubId) {
+      if (!confirm('Leave this club?')) return;
+      try {
+        const { error } = await getSupabase().from('book_club_members')
+          .delete().eq('club_id', clubId).eq('user_id', currentUser.id);
+        if (error) throw new Error(error.message);
+        closeClubDetail(); showToast('Left the club.'); loadFamily();
+      } catch (err) { showToast('Error: ' + err.message); }
+    }
+
+    async function deleteClub(clubId) {
+      if (!confirm('Delete this club and all its notes? This cannot be undone.')) return;
+      try {
+        const { error } = await getSupabase().from('book_clubs').delete().eq('id', clubId);
+        if (error) throw new Error(error.message);
+        closeClubDetail(); showToast('Club deleted.'); loadFamily();
+      } catch (err) { showToast('Error: ' + err.message); }
+    }
+
+    async function copyClubCode(code, btn) {
+      try { await navigator.clipboard.writeText(code); } catch (_) {}
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
     }
 
     async function openFriendBook(googleBookId) {
@@ -1992,6 +2377,7 @@
         };
         const extra = toList === 'read' ? { finished_at: new Date().toISOString() } : {};
         await addToList(book, toList, extra);
+        logActivity(toList === 'read' ? 'finished_book' : 'added_book', book, toList);
         await removeFromList(googleBookId, fromList);
         if (!myLists[googleBookId]) myLists[googleBookId] = new Set();
         myLists[googleBookId].add(toList);
@@ -2020,6 +2406,7 @@
       try {
         const extra = listName === 'purchased' && book.page_count ? { total_pages: book.page_count } : {};
         await addToList(book, listName, extra);
+        logActivity(listName === 'read' ? 'finished_book' : 'added_book', book, listName);
         if (!myLists[googleBookId]) myLists[googleBookId] = new Set();
         myLists[googleBookId].add(listName);
         delete listCache[listName];
