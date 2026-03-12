@@ -69,6 +69,7 @@
     <div class="sort-bar">
       <span class="sort-label">Sort:</span>
       <button class="sort-btn sort-btn-active" data-sort-list="to-read" data-sort="newest" onclick="setSortOrder('to-read','newest')">Newest</button>
+      <button class="sort-btn" data-sort-list="to-read" data-sort="oldest" onclick="setSortOrder('to-read','oldest')">Oldest</button>
       <button class="sort-btn" data-sort-list="to-read" data-sort="az" onclick="setSortOrder('to-read','az')">A–Z</button>
       <button class="sort-btn" data-sort-list="to-read" data-sort="author" onclick="setSortOrder('to-read','author')">Author</button>
       <div class="view-toggle-wrap">
@@ -101,6 +102,7 @@
     <div class="sort-bar">
       <span class="sort-label">Sort:</span>
       <button class="sort-btn sort-btn-active" data-sort-list="purchased" data-sort="newest" onclick="setSortOrder('purchased','newest')">Newest</button>
+      <button class="sort-btn" data-sort-list="purchased" data-sort="oldest" onclick="setSortOrder('purchased','oldest')">Oldest</button>
       <button class="sort-btn" data-sort-list="purchased" data-sort="az" onclick="setSortOrder('purchased','az')">A–Z</button>
       <button class="sort-btn" data-sort-list="purchased" data-sort="author" onclick="setSortOrder('purchased','author')">Author</button>
       <div class="view-toggle-wrap">
@@ -133,9 +135,11 @@
     <div class="sort-bar">
       <span class="sort-label">Sort:</span>
       <button class="sort-btn sort-btn-active" data-sort-list="read" data-sort="newest" onclick="setSortOrder('read','newest')">Newest</button>
+      <button class="sort-btn" data-sort-list="read" data-sort="oldest" onclick="setSortOrder('read','oldest')">Oldest</button>
       <button class="sort-btn" data-sort-list="read" data-sort="az" onclick="setSortOrder('read','az')">A–Z</button>
       <button class="sort-btn" data-sort-list="read" data-sort="author" onclick="setSortOrder('read','author')">Author</button>
       <button class="sort-btn" data-sort-list="read" data-sort="rating" onclick="setSortOrder('read','rating')">Rating</button>
+      <button class="sort-btn" data-sort-list="read" data-sort="finished" onclick="setSortOrder('read','finished')">Finished</button>
       <div class="view-toggle-wrap">
         <button class="view-toggle-btn view-toggle-active" id="view-toggle-list-read" onclick="setViewMode('read','list')" title="List view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
         <button class="view-toggle-btn" id="view-toggle-grid-read" onclick="setViewMode('read','grid')" title="Cover grid"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg></button>
@@ -517,9 +521,11 @@
 
     function sortEntries(entries, sort) {
       const arr = [...entries];
-      if (sort === 'az')     arr.sort((a, b) => (a.title   || '').localeCompare(b.title   || ''));
-      if (sort === 'author') arr.sort((a, b) => (a.authors || '').localeCompare(b.authors || ''));
-      if (sort === 'rating') arr.sort((a, b) => (b.rating  || 0) - (a.rating  || 0));
+      if (sort === 'az')       arr.sort((a, b) => (a.title   || '').localeCompare(b.title   || ''));
+      if (sort === 'author')   arr.sort((a, b) => (a.authors || '').localeCompare(b.authors || ''));
+      if (sort === 'rating')   arr.sort((a, b) => (b.rating  || 0) - (a.rating  || 0));
+      if (sort === 'oldest')   arr.sort((a, b) => new Date(a.added_at||0) - new Date(b.added_at||0));
+      if (sort === 'finished') arr.sort((a, b) => new Date(b.finished_at||0) - new Date(a.finished_at||0));
       // 'newest' keeps DB order (added_at desc)
       return arr;
     }
@@ -531,8 +537,18 @@
       });
       const entries = listCache[listName];
       if (!entries) return;
+      const sorted = sortEntries(entries, sort);
       const container = document.getElementById('list-' + listName);
-      container.innerHTML = sortEntries(entries, sort).map(e => renderListCard(e, listName)).join('');
+      if (listViewModes[listName] === 'grid') {
+        container.className = '';
+        container.innerHTML = renderCoverGrid(sorted, listName);
+      } else if (listViewModes[listName] === 'carousel') {
+        container.className = '';
+        container.innerHTML = renderCarousel(sorted, listName);
+      } else {
+        container.className = 'results-grid';
+        container.innerHTML = sorted.map(e => renderListCard(e, listName)).join('');
+      }
     }
 
     // ── Star rating ────────────────────────────────────────────────────────
@@ -1127,6 +1143,28 @@
       }
     }
 
+    // ── Currently Reading toggle ───────────────────────────────────────────
+    async function toggleCurrentlyReading(googleBookId, btn) {
+      const entry = _detailEntry;
+      const newVal = !entry.currently_reading;
+      btn.disabled = true;
+      try {
+        await updateBookMeta(googleBookId, 'purchased', { currently_reading: newVal });
+        entry.currently_reading = newVal;
+        const cached = (listCache['purchased'] || []).find(e => e.google_book_id === googleBookId);
+        if (cached) cached.currently_reading = newVal;
+        btn.textContent = '';
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg> ${newVal ? 'Reading now ✓' : 'Mark as reading'}`;
+        btn.classList.toggle('detail-util-reading', newVal);
+        delete listCache['purchased'];
+        showToast(newVal ? 'Marked as currently reading' : 'Removed from currently reading');
+      } catch (err) {
+        showToast('Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
     // ── Shop for book ──────────────────────────────────────────────────────
     function shopForBook(title, authors) {
       const q = encodeURIComponent(`${title} ${authors} buy book`);
@@ -1222,7 +1260,7 @@
       try {
         const { data: books } = await getSupabase()
           .from('book_lists')
-          .select('list_name, rating, finished_at, authors, total_pages, current_page')
+          .select('list_name, rating, finished_at, authors, total_pages, current_page, currently_reading, title, thumbnail')
           .eq('user_id', currentUser.id);
         if (!books) { container.innerHTML = '<div class="empty-state"><h3>No data yet</h3></div>'; return; }
 
@@ -1253,11 +1291,27 @@
         });
         const topAuthors = Object.entries(authorCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
+        // Currently reading
+        const nowReading = books.filter(b => b.currently_reading);
+
         // Reading goal
         const goal = parseInt(localStorage.getItem('readingGoal') || '0');
         const goalPct = goal ? Math.min(Math.round(readThisYear.length / goal * 100), 100) : 0;
 
         container.innerHTML = `
+          ${nowReading.length ? `
+          <div class="stats-section" style="border-color:#bfdbfe;background:var(--blue-bg)">
+            <div class="stats-section-title" style="color:var(--blue)">📖 Currently Reading</div>
+            ${nowReading.map(b => `
+              <div class="stats-row" style="gap:.6rem;align-items:center">
+                ${b.thumbnail ? `<img src="${escHtml(b.thumbnail)}" style="width:32px;height:44px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
+                <div style="min-width:0">
+                  <div style="font-weight:700;font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(b.title||'')}</div>
+                  <div style="font-size:.75rem;color:var(--gray-400)">${escHtml(b.authors||'')}</div>
+                </div>
+              </div>`).join('')}
+          </div>` : ''}
+
           <!-- Big numbers -->
           <div class="stats-grid">
             <div class="stats-card">
@@ -1517,7 +1571,12 @@
           <button class="note-save-btn" style="margin-top:0.35rem" onclick="detailSaveNote()">Save note</button>
         </div>
 
-        <div class="detail-utility-row">
+        <div class="detail-utility-row" style="flex-wrap:wrap">
+          ${listName === 'purchased' ? `
+          <button class="detail-util-btn ${entry.currently_reading ? 'detail-util-reading' : ''}" id="detail-reading-btn" onclick="toggleCurrentlyReading('${escHtml(googleBookId)}', this)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg>
+            ${entry.currently_reading ? 'Reading now ✓' : 'Mark as reading'}
+          </button>` : ''}
           <button class="detail-util-btn" onclick="shopForBook('${escHtml(entry.title)}','${escHtml(entry.authors||'')}')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m5-9v9m4-9v9m5-9l-2 9"/></svg>
             Shop for this book
@@ -1536,7 +1595,12 @@
           ).join('')}
           <button class="detail-remove-btn" onclick="detailRemove('${escHtml(googleBookId)}','${listName}')">Remove from list</button>
         </div>` : `
-        <div class="detail-utility-row">
+        <div class="detail-utility-row" style="flex-wrap:wrap">
+          ${listName === 'purchased' ? `
+          <button class="detail-util-btn ${entry.currently_reading ? 'detail-util-reading' : ''}" id="detail-reading-btn" onclick="toggleCurrentlyReading('${escHtml(googleBookId)}', this)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg>
+            ${entry.currently_reading ? 'Reading now ✓' : 'Mark as reading'}
+          </button>` : ''}
           <button class="detail-util-btn" onclick="shopForBook('${escHtml(entry.title)}','${escHtml(entry.authors||'')}')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m5-9v9m4-9v9m5-9l-2 9"/></svg>
             Shop for this book
