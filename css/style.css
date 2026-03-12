@@ -736,7 +736,6 @@ body {
   -webkit-overflow-scrolling: touch;
   gap: 0;
   padding: 2rem 0 1.5rem;
-  perspective: 1400px;
 }
 .cover-carousel::-webkit-scrollbar { display: none; }
 .cover-carousel { scrollbar-width: none; }
@@ -752,19 +751,19 @@ body {
   text-align: center;
 }
 
-/* 3D book container */
+/* 3D book container — no filter here, filter kills preserve-3d */
 .carousel-book-3d {
   position: relative;
   width: 160px;
   height: 240px;
   transform-style: preserve-3d;
-  transform: rotateY(-28deg);
+  /* perspective inline so it applies regardless of parent */
+  transform: perspective(700px) rotateY(-28deg);
   margin-bottom: 0.9rem;
-  filter: drop-shadow(8px 14px 20px rgba(0,0,0,.38));
-  transition: transform 0.25s ease, filter 0.25s ease;
+  transition: transform 0.25s ease;
 }
 .cover-carousel-item:active .carousel-book-3d {
-  transform: rotateY(-28deg) scale(0.96);
+  transform: perspective(700px) rotateY(-28deg) scale(0.96);
 }
 
 /* Front face — the cover */
@@ -775,6 +774,8 @@ body {
   overflow: hidden;
   background: #e5e7eb;
   backface-visibility: hidden;
+  /* shadow on the face instead of the container */
+  box-shadow: 6px 10px 22px rgba(0,0,0,.35);
 }
 .carousel-cover {
   width: 100%;
