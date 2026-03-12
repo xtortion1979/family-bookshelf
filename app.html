@@ -145,6 +145,18 @@
     <div id="list-read" class="results-grid"></div>
   </div>
 
+  <!-- Stats view -->
+  <div id="view-stats" class="view">
+    <div class="list-hero" style="background:linear-gradient(135deg,#0f4c81,#1e40af)">
+      <div class="list-hero-icon">📊</div>
+      <div>
+        <div class="list-hero-title">Stats</div>
+        <div class="list-hero-sub">Your reading at a glance</div>
+      </div>
+    </div>
+    <div id="stats-content" style="padding:1rem"></div>
+  </div>
+
   <!-- Family view -->
   <div id="view-family" class="view">
     <div class="list-hero" style="background:linear-gradient(135deg,#5b21b6,#7c3aed)">
@@ -230,6 +242,10 @@
     <button class="nav-item" id="nav-family" onclick="switchView('family')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       Friends
+    </button>
+    <button class="nav-item" id="nav-stats" onclick="switchView('stats')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Stats
     </button>
   </nav>
 
@@ -454,6 +470,7 @@
 
       // Load list data on first visit (or on each visit to stay fresh)
       if (view === 'family') loadFamily();
+      else if (view === 'stats') loadStats();
       else if (view !== 'search') loadList(view);
 
       // Close any open dropdowns
@@ -1195,6 +1212,134 @@
       } catch (err) {
         statusEl.textContent = err.message || 'Failed to send.';
         statusEl.style.color = '#dc2626';
+      }
+    }
+
+    // ── Stats view ─────────────────────────────────────────────────────────
+    async function loadStats() {
+      const container = document.getElementById('stats-content');
+      container.innerHTML = '<div class="loading-row"><span class="spinner"></span> Loading…</div>';
+      try {
+        const { data: books } = await getSupabase()
+          .from('book_lists')
+          .select('list_name, rating, finished_at, authors, total_pages, current_page')
+          .eq('user_id', currentUser.id);
+        if (!books) { container.innerHTML = '<div class="empty-state"><h3>No data yet</h3></div>'; return; }
+
+        const thisYear = new Date().getFullYear();
+        const readBooks    = books.filter(b => b.list_name === 'read');
+        const readThisYear = readBooks.filter(b => b.finished_at && new Date(b.finished_at).getFullYear() === thisYear);
+        const ratedBooks   = books.filter(b => b.rating);
+        const avgRating    = ratedBooks.length ? (ratedBooks.reduce((s, b) => s + b.rating, 0) / ratedBooks.length).toFixed(1) : null;
+        const totalPages   = books.reduce((s, b) => s + (b.current_page || 0), 0);
+
+        // Books per year
+        const byYear = {};
+        readBooks.forEach(b => {
+          if (!b.finished_at) return;
+          const y = new Date(b.finished_at).getFullYear();
+          byYear[y] = (byYear[y] || 0) + 1;
+        });
+        const years = Object.keys(byYear).sort((a, b) => b - a);
+        const maxYearCount = Math.max(...Object.values(byYear), 1);
+
+        // Top authors (read list)
+        const authorCount = {};
+        readBooks.forEach(b => {
+          (b.authors || '').split(',').forEach(a => {
+            const name = a.trim();
+            if (name) authorCount[name] = (authorCount[name] || 0) + 1;
+          });
+        });
+        const topAuthors = Object.entries(authorCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+        // Reading goal
+        const goal = parseInt(localStorage.getItem('readingGoal') || '0');
+        const goalPct = goal ? Math.min(Math.round(readThisYear.length / goal * 100), 100) : 0;
+
+        container.innerHTML = `
+          <!-- Big numbers -->
+          <div class="stats-grid">
+            <div class="stats-card">
+              <div class="stats-num">${readThisYear.length}</div>
+              <div class="stats-label">Read in ${thisYear}</div>
+            </div>
+            <div class="stats-card">
+              <div class="stats-num">${readBooks.length}</div>
+              <div class="stats-label">All-time read</div>
+            </div>
+            <div class="stats-card">
+              <div class="stats-num">${avgRating ? '★' + avgRating : '—'}</div>
+              <div class="stats-label">Avg rating</div>
+            </div>
+            <div class="stats-card">
+              <div class="stats-num">${totalPages > 0 ? totalPages.toLocaleString() : '—'}</div>
+              <div class="stats-label">Pages tracked</div>
+            </div>
+          </div>
+
+          <!-- Library breakdown -->
+          <div class="stats-section">
+            <div class="stats-section-title">Your Library</div>
+            ${[['to-read','📖','To Read'],['purchased','🛒','Purchased'],['read','✅','Read']].map(([l,ic,lb]) => {
+              const cnt = books.filter(b => b.list_name === l).length;
+              return `<div class="stats-row"><span>${ic} ${lb}</span><strong>${cnt}</strong></div>`;
+            }).join('')}
+            <div class="stats-row" style="border-top:1px solid var(--gray-200);margin-top:.4rem;padding-top:.4rem">
+              <span>📚 Total</span><strong>${books.length}</strong>
+            </div>
+          </div>
+
+          <!-- Reading goal -->
+          <div class="stats-section">
+            <div class="stats-section-title">${thisYear} Reading Goal</div>
+            <div class="stats-goal-row">
+              <input type="number" id="goal-input" class="stats-goal-input" value="${goal || ''}" placeholder="Set a goal" min="1" max="999">
+              <button class="stats-goal-btn" onclick="saveGoal()">Save</button>
+            </div>
+            ${goal ? `
+              <div style="margin-top:.6rem">
+                <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--gray-600);margin-bottom:.3rem">
+                  <span>${readThisYear.length} of ${goal} books</span><span>${goalPct}%</span>
+                </div>
+                <div class="stats-goal-track"><div class="stats-goal-fill" style="width:${goalPct}%"></div></div>
+              </div>` : ''}
+          </div>
+
+          <!-- Books per year -->
+          ${years.length ? `
+          <div class="stats-section">
+            <div class="stats-section-title">Books Read by Year</div>
+            ${years.map(y => `
+              <div class="stats-year-row">
+                <span class="stats-year-label">${y}</span>
+                <div class="stats-year-bar-wrap">
+                  <div class="stats-year-bar" style="width:${Math.round(byYear[y]/maxYearCount*100)}%"></div>
+                </div>
+                <span class="stats-year-count">${byYear[y]}</span>
+              </div>`).join('')}
+          </div>` : ''}
+
+          <!-- Top authors -->
+          ${topAuthors.length ? `
+          <div class="stats-section">
+            <div class="stats-section-title">Top Authors</div>
+            ${topAuthors.map(([name, cnt]) =>
+              `<div class="stats-row"><span>${escHtml(name)}</span><strong>${cnt} book${cnt>1?'s':''}</strong></div>`
+            ).join('')}
+          </div>` : ''}
+        `;
+      } catch (err) {
+        container.innerHTML = `<div class="empty-state"><h3>Error loading stats</h3><p>${escHtml(err.message)}</p></div>`;
+      }
+    }
+
+    function saveGoal() {
+      const val = parseInt(document.getElementById('goal-input').value);
+      if (val > 0) {
+        localStorage.setItem('readingGoal', val);
+        loadStats();
+        showToast(`Goal set: ${val} books`);
       }
     }
 
