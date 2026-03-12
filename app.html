@@ -970,7 +970,7 @@
 
     async function openScanner() {
       document.getElementById('scanner-modal').classList.add('open');
-      document.getElementById('scanner-status').textContent = 'Point camera at the barcode on the back of the book';
+      document.getElementById('scanner-status').textContent = 'Aim at the ISBN barcode (starts with 978 or 979) — ignore the smaller price barcode beside it';
       try {
         _scanner = new Html5Qrcode('scanner-preview', {
           formatsToSupport: [
@@ -985,10 +985,16 @@
         await _scanner.start(
           { facingMode: 'environment' },
           { fps: 15, qrbox: { width: 280, height: 120 } },
-          (isbn) => {
-            closeScanner();
-            document.getElementById('search-input').value = isbn;
-            doSearch();
+          (code) => {
+            const clean = code.replace(/\D/g, '');
+            if (clean.length === 13 && (clean.startsWith('978') || clean.startsWith('979'))) {
+              closeScanner();
+              document.getElementById('search-input').value = clean;
+              doSearch();
+            } else {
+              document.getElementById('scanner-status').textContent =
+                'Price barcode detected — aim at the barcode starting with 978 or 979';
+            }
           },
           () => {}
         );
