@@ -1783,9 +1783,17 @@
             .in('user_id', followingIds)
             .order('title', { ascending: true });
           allBooks = bd || [];
+          // Cache friend books so openFriendBook can open them without an API call
+          allBooks.forEach(b => {
+            if (!searchCache.find(s => s.google_book_id === b.google_book_id)) searchCache.push(b);
+          });
         }
 
         const recs = await getIncomingRecommendations().catch(() => []);
+        recs.forEach(r => {
+          if (r.google_book_id && !searchCache.find(s => s.google_book_id === r.google_book_id))
+            searchCache.push({ google_book_id: r.google_book_id, title: r.title, authors: r.authors, thumbnail: r.thumbnail });
+        });
 
         if (!allIds.length && !recs.length) {
           container.innerHTML = `
