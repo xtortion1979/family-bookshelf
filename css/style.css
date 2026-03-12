@@ -69,6 +69,24 @@
 [data-theme="dark"] .book-note       { background: #0f172a; border-color: #334155; }
 [data-theme="dark"] .progress-bar-track { background: #334155; }
 [data-theme="dark"] input, [data-theme="dark"] textarea { color-scheme: dark; }
+[data-theme="dark"] .detail-move-btn    { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+[data-theme="dark"] .detail-move-btn:hover { background: #334155; }
+[data-theme="dark"] .detail-remove-btn  { border-color: #7f1d1d; color: #f87171; }
+[data-theme="dark"] .detail-actions     { border-color: #334155; }
+[data-theme="dark"] .family-member      { background: #1e293b; border-color: #334155; }
+[data-theme="dark"] .sort-dropdown      { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+[data-theme="dark"] .search-hero .search-bar button { background: #1e293b; }
+[data-theme="dark"] .toast              { background: #1e293b; color: #f1f5f9; }
+[data-theme="dark"] .my-code-card       { background: #1e293b; border-color: #334155; }
+[data-theme="dark"] .carousel-title,
+[data-theme="dark"] .carousel-author    { color: #cbd5e1; }
+[data-theme="dark"] .cover-grid-rating  { color: #94a3b8; }
+[data-theme="dark"] .book-title         { color: #f1f5f9; }
+[data-theme="dark"] .book-author        { color: #94a3b8; }
+[data-theme="dark"] .book-desc          { color: #94a3b8; }
+@media (min-width: 768px) {
+  [data-theme="dark"] .app-page { background: #1e293b; }
+}
 
 html { font-size: 16px; }
 
