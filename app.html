@@ -1213,7 +1213,9 @@
       // Load and display share code
       ensureShareCode().then(code => {
         document.getElementById('my-share-code').textContent = code;
-      }).catch(() => {});
+      }).catch(err => {
+        document.getElementById('my-share-code').textContent = 'Error: ' + err.message;
+      });
 
       try {
         const [allBooks, profiles] = await Promise.all([getAllFamilyBooks(), getAllProfiles()]);
