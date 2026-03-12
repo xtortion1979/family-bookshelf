@@ -1146,7 +1146,8 @@
         if (upErr) throw new Error(upErr.message);
         const { data: { publicUrl } } = getSupabase().storage.from('avatars').getPublicUrl(path);
         const bust = publicUrl + '?t=' + Date.now();
-        await getSupabase().from('profiles').upsert({ id: currentUser.id, avatar_url: publicUrl }, { onConflict: 'id' });
+        const { error: dbErr } = await getSupabase().from('profiles').upsert({ id: currentUser.id, avatar_url: publicUrl }, { onConflict: 'id' });
+        if (dbErr) throw new Error('Photo saved but profile not updated: ' + dbErr.message);
         setAvatarDisplay(bust, document.getElementById('profile-name').value);
         showToast('Profile photo updated!');
       } catch (err) {
