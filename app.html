@@ -1435,9 +1435,9 @@
     }
 
     async function detailMove(googleBookId, fromList, toList) {
+      const entry = _detailEntry;
       closeDetail();
       try {
-        const entry = _detailEntry;
         const book = {
           google_book_id: entry.google_book_id,
           title:          entry.title,
