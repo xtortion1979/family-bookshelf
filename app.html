@@ -1181,9 +1181,8 @@
       }).catch(() => {});
 
       try {
-        const [allBooks, profiles, recs] = await Promise.all([
-          getAllFamilyBooks(), getAllProfiles(), getIncomingRecommendations()
-        ]);
+        const [allBooks, profiles] = await Promise.all([getAllFamilyBooks(), getAllProfiles()]);
+        const recs = await getIncomingRecommendations().catch(() => []);
 
         // Filter to only connected members (not current user)
         const others = profiles.filter(p => p.id !== currentUser.id);
