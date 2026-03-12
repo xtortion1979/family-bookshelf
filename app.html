@@ -70,6 +70,7 @@
       <div class="view-toggle-wrap">
         <button class="view-toggle-btn view-toggle-active" id="view-toggle-list-to-read" onclick="setViewMode('to-read','list')" title="List view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
         <button class="view-toggle-btn" id="view-toggle-grid-to-read" onclick="setViewMode('to-read','grid')" title="Cover grid"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg></button>
+        <button class="view-toggle-btn" id="view-toggle-carousel-to-read" onclick="setViewMode('to-read','carousel')" title="Swipe view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><rect x="7" y="3" width="10" height="18" rx="2" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M2 12h2M20 12h2"/></svg></button>
       </div>
     </div>
     <div id="list-to-read" class="results-grid"></div>
@@ -101,6 +102,7 @@
       <div class="view-toggle-wrap">
         <button class="view-toggle-btn view-toggle-active" id="view-toggle-list-purchased" onclick="setViewMode('purchased','list')" title="List view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
         <button class="view-toggle-btn" id="view-toggle-grid-purchased" onclick="setViewMode('purchased','grid')" title="Cover grid"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg></button>
+        <button class="view-toggle-btn" id="view-toggle-carousel-purchased" onclick="setViewMode('purchased','carousel')" title="Swipe view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><rect x="7" y="3" width="10" height="18" rx="2" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M2 12h2M20 12h2"/></svg></button>
       </div>
     </div>
     <div id="list-purchased" class="results-grid"></div>
@@ -133,6 +135,7 @@
       <div class="view-toggle-wrap">
         <button class="view-toggle-btn view-toggle-active" id="view-toggle-list-read" onclick="setViewMode('read','list')" title="List view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
         <button class="view-toggle-btn" id="view-toggle-grid-read" onclick="setViewMode('read','grid')" title="Cover grid"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg></button>
+        <button class="view-toggle-btn" id="view-toggle-carousel-read" onclick="setViewMode('read','carousel')" title="Swipe view"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><rect x="7" y="3" width="10" height="18" rx="2" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M2 12h2M20 12h2"/></svg></button>
       </div>
     </div>
     <div id="list-read" class="results-grid"></div>
@@ -318,8 +321,9 @@
     function setViewMode(listName, mode) {
       listViewModes[listName] = mode;
       localStorage.setItem('listViewModes', JSON.stringify(listViewModes));
-      document.getElementById(`view-toggle-list-${listName}`).classList.toggle('view-toggle-active', mode === 'list');
-      document.getElementById(`view-toggle-grid-${listName}`).classList.toggle('view-toggle-active', mode === 'grid');
+      ['list','grid','carousel'].forEach(m => {
+        document.getElementById(`view-toggle-${m}-${listName}`)?.classList.toggle('view-toggle-active', m === mode);
+      });
       loadList(listName);
     }
 
@@ -343,13 +347,42 @@
       }).join('')}</div>`;
     }
 
+    function renderCarousel(entries, listName) {
+      if (!entries.length) return '<div class="empty-state"><h3>No books yet</h3></div>';
+      return `<div class="cover-carousel">${entries.map(entry => {
+        const id = escHtml(entry.google_book_id);
+        const cur = entry.current_page || 0;
+        const tot = entry.total_pages || 0;
+        const pct = (cur && tot) ? Math.min(Math.round(cur / tot * 100), 100) : 0;
+        const progressBar = listName === 'purchased' && (cur || tot)
+          ? `<div class="carousel-progress-track"><div class="carousel-progress-fill" style="width:${pct}%"></div></div>`
+          : '';
+        const stars = entry.rating
+          ? `<div class="carousel-stars">${'★'.repeat(entry.rating)}${'☆'.repeat(5 - entry.rating)}</div>`
+          : '';
+        const finished = listName === 'read' && entry.finished_at
+          ? `<div class="carousel-finished">Finished ${new Date(entry.finished_at).toLocaleDateString('en-US',{month:'short',year:'numeric'})}</div>`
+          : '';
+        return `<div class="cover-carousel-item" onclick="openDetail('${id}','${listName}')">
+          <div class="carousel-cover-wrap">
+            ${entry.thumbnail
+              ? `<img class="carousel-cover" src="${escHtml(entry.thumbnail)}" alt="${escHtml(entry.title)}" loading="lazy">`
+              : `<div class="carousel-cover carousel-cover-ph"></div>`}
+            ${progressBar}
+          </div>
+          <div class="carousel-title">${escHtml(entry.title)}</div>
+          <div class="carousel-author">${escHtml(entry.authors || '')}</div>
+          ${stars}${finished}
+        </div>`;
+      }).join('')}</div>`;
+    }
+
     // Apply saved toggle states on load
     ['to-read','purchased','read'].forEach(l => {
       const m = listViewModes[l];
-      if (m === 'grid') {
-        document.getElementById(`view-toggle-list-${l}`)?.classList.remove('view-toggle-active');
-        document.getElementById(`view-toggle-grid-${l}`)?.classList.add('view-toggle-active');
-      }
+      ['list','grid','carousel'].forEach(m2 => {
+        document.getElementById(`view-toggle-${m2}-${l}`)?.classList.toggle('view-toggle-active', m2 === m);
+      });
     });
 
     // ── Init ───────────────────────────────────────────────────────────────
@@ -542,6 +575,9 @@
           if (listViewModes[listName] === 'grid') {
             container.className = '';
             container.innerHTML = renderCoverGrid(sorted, listName);
+          } else if (listViewModes[listName] === 'carousel') {
+            container.className = '';
+            container.innerHTML = renderCarousel(sorted, listName);
           } else {
             container.className = 'results-grid';
             container.innerHTML = sorted.map(e => renderListCard(e, listName)).join('');
