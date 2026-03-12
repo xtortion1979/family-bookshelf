@@ -11,7 +11,12 @@ async function searchBooks(query, maxResults = 20) {
   }
   if (!resp.ok) throw new Error('Google Books search failed. Please try again later.');
   const data = await resp.json();
-  return (data.items || []).map(normalizeBook);
+  const books = (data.items || []).map(normalizeBook);
+  // Populate Supabase book_cache so future lookups skip Google Books (fire and forget)
+  if (books.length && typeof getSupabase === 'function') {
+    getSupabase().from('book_cache').upsert(books, { onConflict: 'google_book_id' }).then(() => {});
+  }
+  return books;
 }
 
 // ── Normalize a Google Books item into a flat object ─────────────────────

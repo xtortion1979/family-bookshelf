@@ -2326,12 +2326,25 @@
     }
 
     async function openFriendBook(googleBookId) {
-      // Check cache first
+      // 1. Check in-memory cache first (fastest)
       if (searchCache.find(b => b.google_book_id === googleBookId)) {
         openDetail(googleBookId, null);
         return;
       }
-      // Fetch from Google Books by volume ID
+      // 2. Check Supabase book_cache (avoids Google Books API call)
+      try {
+        const { data: cached } = await getSupabase()
+          .from('book_cache')
+          .select('google_book_id, title, authors, description, thumbnail, published_date, page_count')
+          .eq('google_book_id', googleBookId)
+          .maybeSingle();
+        if (cached) {
+          searchCache.push(cached);
+          openDetail(googleBookId, null);
+          return;
+        }
+      } catch { /* fall through to Google Books */ }
+      // 3. Fall back to Google Books API
       try {
         let url = `https://www.googleapis.com/books/v1/volumes/${encodeURIComponent(googleBookId)}`;
         if (typeof GOOGLE_BOOKS_API_KEY !== 'undefined' && GOOGLE_BOOKS_API_KEY) url += `?key=${GOOGLE_BOOKS_API_KEY}`;
@@ -2342,6 +2355,8 @@
         searchCache = searchCache.filter(b => b.google_book_id !== googleBookId);
         searchCache.push(book);
         openDetail(googleBookId, null);
+        // Save to Supabase cache for future use (fire and forget)
+        getSupabase().from('book_cache').upsert(book, { onConflict: 'google_book_id' }).then(() => {});
       } catch (err) {
         showToast('Could not load book details');
       }
