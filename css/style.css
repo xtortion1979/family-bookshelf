@@ -1000,6 +1000,40 @@ body {
   font-size: 1.1rem;
   margin-bottom: 0.2rem;
 }
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.2rem;
+}
+.profile-name-input {
+  font-weight: 700;
+  font-size: 1.1rem;
+  border: none;
+  border-bottom: 1.5px solid transparent;
+  background: transparent;
+  color: var(--gray-800);
+  padding: 0.1rem 0;
+  flex: 1;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+}
+.profile-name-input:focus { border-bottom-color: var(--blue); }
+.profile-name-save {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--blue);
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  opacity: 0.6;
+  transition: opacity .15s;
+}
+.profile-name-save:hover { opacity: 1; }
+[data-theme="dark"] .profile-name-input { color: #f1f5f9; }
 .profile-email {
   font-size: 0.85rem;
   color: var(--gray-400);

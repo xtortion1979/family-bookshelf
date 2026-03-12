@@ -181,6 +181,14 @@ async function markRecommendationSeen(id) {
   await getSupabase().from('recommendations').update({ seen: true }).eq('id', id);
 }
 
+async function updateProfileName(userId, name) {
+  const { error } = await getSupabase()
+    .from('profiles')
+    .update({ name })
+    .eq('id', userId);
+  if (error) throw new Error(error.message);
+}
+
 async function getRecentlyAdded(limit = 10) {
   const { data } = await getSupabase()
     .from('book_lists')

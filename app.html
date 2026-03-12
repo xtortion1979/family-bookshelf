@@ -237,7 +237,13 @@
   <div class="profile-menu" id="profile-menu">
     <div class="profile-overlay" onclick="closeProfile()"></div>
     <div class="profile-sheet">
-      <div class="profile-name" id="profile-name">…</div>
+      <div class="profile-name-row">
+        <input type="text" id="profile-name" class="profile-name-input" placeholder="Your name" maxlength="40"
+          onkeydown="if(event.key==='Enter')saveProfileName()">
+        <button class="profile-name-save" id="profile-name-save" onclick="saveProfileName()" title="Save name">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        </button>
+      </div>
       <div class="profile-email" id="profile-email">…</div>
       <div class="profile-actions">
         <!-- MFA status + toggle -->
@@ -423,7 +429,7 @@
       // Show avatar initial
       const name  = await getUserName(currentUser.id);
       document.getElementById('avatar-btn').textContent  = name.charAt(0).toUpperCase();
-      document.getElementById('profile-name').textContent  = name;
+      document.getElementById('profile-name').value        = name;
       document.getElementById('profile-email').textContent = currentUser.email;
 
       // Pre-load which books are already in lists
@@ -806,6 +812,24 @@
     function closeProfile() {
       document.getElementById('profile-menu').classList.remove('open');
       cancelEnroll();
+    }
+
+    async function saveProfileName() {
+      const input = document.getElementById('profile-name');
+      const name = input.value.trim();
+      if (!name) return;
+      const btn = document.getElementById('profile-name-save');
+      btn.disabled = true;
+      try {
+        await updateProfileName(currentUser.id, name);
+        document.getElementById('avatar-btn').textContent = name.charAt(0).toUpperCase();
+        showToast('Name updated');
+        input.blur();
+      } catch (err) {
+        showToast('Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     async function refreshMfaStatus() {
