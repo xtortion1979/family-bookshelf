@@ -981,6 +981,13 @@
       const book  = searchCache.find(b => b.google_book_id === googleBookId);
       if (!book) return;
 
+      // Warn if already in this list
+      if (myLists[googleBookId]?.has(listName)) {
+        const listLabels = { 'want-to-read': 'Want to Read', 'purchased': 'Purchased', 'read': 'Read' };
+        showToast(`Already in ${listLabels[listName] || listName}`);
+        return;
+      }
+
       btn.disabled = true;
       try {
         const extra = listName === 'purchased' && book.page_count ? { total_pages: book.page_count } : {};
