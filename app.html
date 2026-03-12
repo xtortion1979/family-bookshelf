@@ -367,33 +367,25 @@
 
     function renderCarousel(entries, listName) {
       if (!entries.length) return '<div class="empty-state"><h3>No books yet</h3></div>';
+      const spineColors = [
+        ['#1e3a5f','#bfdbfe'], ['#14532d','#bbf7d0'], ['#451a03','#fde68a'],
+        ['#3b0764','#e9d5ff'], ['#7f1d1d','#fecaca'], ['#1c1917','#e7e5e4'],
+        ['#0c4a6e','#bae6fd'], ['#064e3b','#a7f3d0'], ['#4c1d95','#ddd6fe'],
+        ['#831843','#fbcfe8'], ['#1e1b4b','#c7d2fe'], ['#134e4a','#99f6e4'],
+      ];
+      const heights = [185, 200, 192, 208, 196];
       return `<div class="cover-carousel">${entries.map(entry => {
         const id = escHtml(entry.google_book_id);
-        const cur = entry.current_page || 0;
-        const tot = entry.total_pages || 0;
-        const pct = (cur && tot) ? Math.min(Math.round(cur / tot * 100), 100) : 0;
-        const progressBar = listName === 'purchased' && (cur || tot)
-          ? `<div class="carousel-progress-track"><div class="carousel-progress-fill" style="width:${pct}%"></div></div>`
-          : '';
-        const stars = entry.rating
-          ? `<div class="carousel-stars">${'★'.repeat(entry.rating)}${'☆'.repeat(5 - entry.rating)}</div>`
-          : '';
-        const finished = listName === 'read' && entry.finished_at
-          ? `<div class="carousel-finished">Finished ${new Date(entry.finished_at).toLocaleDateString('en-US',{month:'short',year:'numeric'})}</div>`
-          : '';
-        return `<div class="cover-carousel-item" onclick="openDetail('${id}','${listName}')">
-          <div class="carousel-book-3d">
-            <div class="carousel-book-face">
-              ${entry.thumbnail
-                ? `<img class="carousel-cover" src="${escHtml(entry.thumbnail)}" alt="${escHtml(entry.title)}" loading="lazy">`
-                : `<div class="carousel-cover carousel-cover-ph"></div>`}
-              ${progressBar}
-            </div>
-            <div class="carousel-book-spine"></div>
+        let hash = 0;
+        for (const c of (entry.google_book_id || '')) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff;
+        const [bg, fg] = spineColors[hash % spineColors.length];
+        const h = heights[hash % heights.length];
+        const firstAuthor = escHtml((entry.authors || '').split(',')[0]);
+        return `<div class="cover-carousel-item" style="height:${h}px" onclick="openDetail('${id}','${listName}')">
+          <div class="carousel-spine" style="background:${bg}">
+            <span class="carousel-spine-title" style="color:${fg}">${escHtml(entry.title)}</span>
+            <span class="carousel-spine-author" style="color:${fg}99">${firstAuthor}</span>
           </div>
-          <div class="carousel-title">${escHtml(entry.title)}</div>
-          <div class="carousel-author">${escHtml(entry.authors || '')}</div>
-          ${stars}${finished}
         </div>`;
       }).join('')}</div>`;
     }
