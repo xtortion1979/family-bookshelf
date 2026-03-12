@@ -1440,11 +1440,21 @@
       const container = document.getElementById('stats-content');
       container.innerHTML = '<div class="loading-row"><span class="spinner"></span> Loading…</div>';
       try {
-        const { data: books } = await getSupabase()
+        const { data: books, error: bErr } = await getSupabase()
           .from('book_lists')
-          .select('list_name, rating, finished_at, authors, total_pages, current_page, currently_reading, title, thumbnail')
+          .select('list_name, rating, finished_at, authors, total_pages, current_page, title, thumbnail')
           .eq('user_id', currentUser.id);
-        if (!books) { container.innerHTML = '<div class="empty-state"><h3>No data yet</h3></div>'; return; }
+        if (bErr) throw new Error(bErr.message);
+        if (!books || !books.length) { container.innerHTML = '<div class="empty-state"><h3>No books yet</h3><p>Add some books to see your stats.</p></div>'; return; }
+
+        // currently_reading is optional — requires ALTER TABLE migration
+        const { data: crBooks } = await getSupabase()
+          .from('book_lists')
+          .select('title, thumbnail, authors, currently_reading')
+          .eq('user_id', currentUser.id)
+          .eq('currently_reading', true)
+          .catch(() => ({ data: [] }));
+        const nowReading = crBooks || [];
 
         const thisYear = new Date().getFullYear();
         const readBooks    = books.filter(b => b.list_name === 'read');
@@ -1472,9 +1482,6 @@
           });
         });
         const topAuthors = Object.entries(authorCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
-
-        // Currently reading
-        const nowReading = books.filter(b => b.currently_reading);
 
         // Reading goal
         const goal = parseInt(localStorage.getItem('readingGoal') || '0');
