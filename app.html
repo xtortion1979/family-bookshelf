@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="stylesheet" href="css/style.css?v=3">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body class="app-page">
@@ -47,6 +47,25 @@
         <div class="section-label">Recently Added</div>
         <div id="recent-books" class="recent-scroll"></div>
       </div>
+
+      <!-- New Releases -->
+      <div id="new-releases-section">
+        <div class="section-label" style="margin-top:1.25rem">New Releases</div>
+        <div class="nr-genre-tabs" id="nr-genre-tabs">
+          <button class="nr-tab active" onclick="loadNewReleases('fiction',this)">Fiction</button>
+          <button class="nr-tab" onclick="loadNewReleases('nonfiction',this)">Nonfiction</button>
+          <button class="nr-tab" onclick="loadNewReleases('mystery',this)">Mystery</button>
+          <button class="nr-tab" onclick="loadNewReleases('science+fiction',this)">Sci-Fi</button>
+          <button class="nr-tab" onclick="loadNewReleases('romance',this)">Romance</button>
+          <button class="nr-tab" onclick="loadNewReleases('thriller',this)">Thriller</button>
+          <button class="nr-tab" onclick="loadNewReleases('biography',this)">Biography</button>
+          <button class="nr-tab" onclick="loadNewReleases('self+help',this)">Self-Help</button>
+        </div>
+        <div id="nr-books" class="recent-scroll nr-scroll">
+          <div class="nr-loading">Loading…</div>
+        </div>
+      </div>
+
       <div id="search-results" class="results-grid"></div>
     </div>
   </div>
@@ -2658,6 +2677,70 @@
           </div>`;
         }).join('');
       } catch (_) {}
+    }
+
+    // ── New Releases ───────────────────────────────────────────────────────
+    const _nrCache = {};  // { genre: [ book, ... ] }
+    let _nrActiveGenre = 'fiction';
+
+    async function loadNewReleases(genre, tabEl) {
+      // Update active tab
+      document.querySelectorAll('.nr-tab').forEach(t => t.classList.remove('active'));
+      if (tabEl) tabEl.classList.add('active');
+      _nrActiveGenre = genre;
+
+      const container = document.getElementById('nr-books');
+      if (_nrCache[genre]) {
+        renderNewReleases(_nrCache[genre]);
+        return;
+      }
+
+      container.innerHTML = '<div class="nr-loading">Loading…</div>';
+      try {
+        let url = `https://www.googleapis.com/books/v1/volumes?q=subject:${genre}&orderBy=newest&maxResults=20&printType=books&langRestrict=en`;
+        if (typeof GOOGLE_BOOKS_API_KEY !== 'undefined' && GOOGLE_BOOKS_API_KEY) url += `&key=${GOOGLE_BOOKS_API_KEY}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('fetch failed');
+        const data = await resp.json();
+        const books = (data.items || []).map(normalizeBook).filter(b => b.thumbnail);
+        _nrCache[genre] = books;
+        // Populate Supabase book_cache (fire and forget)
+        if (books.length && typeof getSupabase === 'function') {
+          getSupabase().from('book_cache').upsert(books, { onConflict: 'google_book_id' }).then(() => {});
+        }
+        renderNewReleases(books);
+      } catch {
+        container.innerHTML = '<div class="nr-loading">Could not load new releases.</div>';
+      }
+    }
+
+    function renderNewReleases(books) {
+      const container = document.getElementById('nr-books');
+      if (!books.length) {
+        container.innerHTML = '<div class="nr-loading">No results found.</div>';
+        return;
+      }
+      container.innerHTML = books.map(b => {
+        const id = escHtml(b.google_book_id);
+        const inList = myLists[b.google_book_id] ? [...myLists[b.google_book_id]].map(l => LIST_LABELS[l]?.label).join(', ') : '';
+        return `<div class="nr-card" onclick="openNrBook('${id}')">
+          <img class="nr-cover" src="${escHtml(b.thumbnail)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'">
+          <div class="nr-title">${escHtml(b.title)}</div>
+          <div class="nr-author">${escHtml(b.authors)}</div>
+          ${inList ? `<div class="nr-in-list">${escHtml(inList)}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    async function openNrBook(googleBookId) {
+      // Add to searchCache so detail sheet can open it
+      if (!searchCache.find(b => b.google_book_id === googleBookId)) {
+        for (const genre in _nrCache) {
+          const found = _nrCache[genre].find(b => b.google_book_id === googleBookId);
+          if (found) { searchCache.push(found); break; }
+        }
+      }
+      openDetail(googleBookId, null);
     }
 
     // ── Onboarding ────────────────────────────────────────────────────────
