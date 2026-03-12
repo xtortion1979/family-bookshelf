@@ -528,9 +528,6 @@
         if (!searchCache.length && isIsbn) {
           searchCache = await searchOpenLibrary(digits);
         }
-        if (!searchCache.length && isIsbn) {
-          searchCache = await searchCommunityBooks(digits);
-        }
         if (!searchCache.length) {
           el.innerHTML = `<div class="empty-state">
             <h3>No results found</h3>
@@ -675,19 +672,6 @@
           if (upErr) throw new Error('Cover upload failed: ' + upErr.message);
           const { data: urlData } = sb.storage.from('book-covers').getPublicUrl(path);
           thumbnailUrl = urlData.publicUrl;
-        }
-
-        // Save to community_books so others can find it
-        if (title) {
-          statusEl.textContent = 'Saving to community catalog…';
-          const sb = getSupabase();
-          const userId = (await sb.auth.getUser()).data.user.id;
-          await sb.from('community_books').upsert({
-            isbn: isbn || null,
-            title, authors: author, description: desc,
-            thumbnail_url: thumbnailUrl, page_count: pages,
-            added_by: userId,
-          }, { onConflict: 'isbn', ignoreDuplicates: false });
         }
 
         statusEl.textContent = 'Adding to list…';
