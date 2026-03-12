@@ -176,14 +176,6 @@
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
       </button>
     </div>
-    <!-- My share code -->
-    <div class="my-code-card">
-      <div class="my-code-label">Your friend code — share this to connect</div>
-      <div class="my-code-row">
-        <span class="my-code-value" id="my-share-code">••••••</span>
-        <button class="my-code-copy" onclick="copyMyCode(this)">Copy</button>
-      </div>
-    </div>
     <div class="sort-bar">
       <span class="sort-label">Show:</span>
       <button class="sort-btn sort-btn-active" data-family-list="to-read" onclick="loadFamily('to-read')">To Read</button>
@@ -291,14 +283,35 @@
   <div class="profile-menu" id="profile-menu">
     <div class="profile-overlay" onclick="closeProfile()"></div>
     <div class="profile-sheet">
-      <div class="profile-name-row">
-        <input type="text" id="profile-name" class="profile-name-input" placeholder="Your name" maxlength="40"
-          onkeydown="if(event.key==='Enter')saveProfileName()">
-        <button class="profile-name-save" id="profile-name-save" onclick="saveProfileName()" title="Save name">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-        </button>
+      <!-- Avatar -->
+      <div class="profile-header">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar-large" id="profile-avatar-large" onclick="document.getElementById('avatar-upload').click()" title="Change photo">
+            <span id="profile-avatar-initial">?</span>
+          </div>
+          <input type="file" id="avatar-upload" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+          <div class="profile-avatar-edit-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+        </div>
+        <div class="profile-name-row">
+          <input type="text" id="profile-name" class="profile-name-input" placeholder="Your name" maxlength="40"
+            onkeydown="if(event.key==='Enter')saveProfileName()">
+          <button class="profile-name-save" id="profile-name-save" onclick="saveProfileName()" title="Save name">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          </button>
+        </div>
+        <div class="profile-email" id="profile-email">…</div>
       </div>
-      <div class="profile-email" id="profile-email">…</div>
+      <!-- Friend code -->
+      <div class="profile-code-section">
+        <div class="profile-section-label">Friend Code</div>
+        <div class="my-code-row">
+          <span class="my-code-value" id="my-share-code">••••••</span>
+          <button class="my-code-copy" onclick="copyMyCode(this)">Copy</button>
+        </div>
+        <div style="font-size:.73rem;color:var(--gray-400);margin-top:.3rem">Share this so friends can connect with you</div>
+      </div>
       <div class="profile-actions">
         <!-- MFA status + toggle -->
         <div id="mfa-status" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:0.875rem 1rem;margin-bottom:0.5rem">
@@ -537,11 +550,16 @@
       currentUser = await requireAuth();
       if (!currentUser) return;
 
-      // Show avatar initial
-      const name  = await getUserName(currentUser.id);
+      // Show avatar / name
+      const { data: profileData } = await getSupabase().from('profiles')
+        .select('name, avatar_url').eq('id', currentUser.id).maybeSingle();
+      const name = profileData?.name || currentUser.email.split('@')[0];
       document.getElementById('avatar-btn').textContent  = name.charAt(0).toUpperCase();
       document.getElementById('profile-name').value        = name;
       document.getElementById('profile-email').textContent = currentUser.email;
+      if (profileData?.avatar_url) {
+        document.getElementById('avatar-btn').innerHTML = `<img src="${profileData.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='${name.charAt(0).toUpperCase()}'">`;
+      }
 
       // Pre-load which books are already in lists
       myLists = await getAllMyBooks();
@@ -1086,7 +1104,57 @@
 
     async function openProfile() {
       document.getElementById('profile-menu').classList.add('open');
-      await refreshMfaStatus();
+      await Promise.all([refreshMfaStatus(), loadProfileData()]);
+    }
+
+    async function loadProfileData() {
+      try {
+        const { data } = await getSupabase().from('profiles')
+          .select('name, avatar_url, share_code').eq('id', currentUser.id).maybeSingle();
+        if (data?.name) {
+          document.getElementById('profile-name').value = data.name;
+          document.getElementById('profile-avatar-initial').textContent = data.name.charAt(0).toUpperCase();
+        }
+        if (data?.share_code) document.getElementById('my-share-code').textContent = data.share_code;
+        else loadShareCode();
+        setAvatarDisplay(data?.avatar_url, data?.name);
+      } catch { loadShareCode(); }
+    }
+
+    function setAvatarDisplay(url, name) {
+      const large = document.getElementById('profile-avatar-large');
+      const topBtn = document.getElementById('avatar-btn');
+      const initial = (name || '?').charAt(0).toUpperCase();
+      if (url) {
+        large.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.innerHTML='<span id=profile-avatar-initial>${initial}</span>'">`;
+        topBtn.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='${initial}'">`;
+      } else {
+        document.getElementById('profile-avatar-initial').textContent = initial;
+        topBtn.textContent = initial;
+      }
+    }
+
+    async function uploadAvatar(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const large = document.getElementById('profile-avatar-large');
+      large.style.opacity = '0.5';
+      try {
+        const resized = await resizeImage(file, 300, 300);
+        const path = `${currentUser.id}/avatar.jpg`;
+        const { error: upErr } = await getSupabase().storage.from('avatars').upload(path, resized, { upsert: true, contentType: 'image/jpeg' });
+        if (upErr) throw new Error(upErr.message);
+        const { data: { publicUrl } } = getSupabase().storage.from('avatars').getPublicUrl(path);
+        const bust = publicUrl + '?t=' + Date.now();
+        await getSupabase().from('profiles').upsert({ id: currentUser.id, avatar_url: publicUrl }, { onConflict: 'id' });
+        setAvatarDisplay(bust, document.getElementById('profile-name').value);
+        showToast('Profile photo updated!');
+      } catch (err) {
+        showToast('Error: ' + err.message);
+      } finally {
+        large.style.opacity = '';
+        input.value = '';
+      }
     }
     function closeProfile() {
       document.getElementById('profile-menu').classList.remove('open');
@@ -1102,7 +1170,10 @@
       try {
         const { error } = await getSupabase().from('profiles').update({ name }).eq('id', currentUser.id);
         if (error) throw new Error(error.message);
-        document.getElementById('avatar-btn').textContent = name.charAt(0).toUpperCase();
+        const initial = name.charAt(0).toUpperCase();
+        document.getElementById('avatar-btn').textContent = initial;
+        const initEl = document.getElementById('profile-avatar-initial');
+        if (initEl) initEl.textContent = initial;
         showToast('Name updated');
         input.blur();
       } catch (err) {
@@ -1685,7 +1756,6 @@
 
       const container = document.getElementById('family-content');
       container.innerHTML = '<div class="loading-row"><span class="spinner"></span> Loading…</div>';
-      loadShareCode();
 
       try {
         const sb = getSupabase();
