@@ -256,7 +256,7 @@ function renderSearchCard(book, myLists) {
       <div class="book-title detail-tap" onclick="openDetail('${sid}', null)">${escHtml(book.title)}</div>
       <div class="book-author">${escHtml(book.authors)}</div>
       ${book.published_date ? `<div class="book-year">${escHtml(book.published_date.slice(0,4))}</div>` : ''}
-      ${book.description ? `<div class="book-desc">${escHtml(book.description)}</div>` : ''}
+      ${book.description ? `<div class="book-desc">${escHtml(book.description.replace(/<[^>]*>/g, ' ').replace(/\s{2,}/g, ' ').trim())}</div>` : ''}
       <div class="add-btn-wrap">
         <button class="add-btn" onclick="toggleDropdown(this)">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
