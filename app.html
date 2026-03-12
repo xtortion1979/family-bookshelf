@@ -821,7 +821,8 @@
       const btn = document.getElementById('profile-name-save');
       btn.disabled = true;
       try {
-        await updateProfileName(currentUser.id, name);
+        const { error } = await getSupabase().from('profiles').update({ name }).eq('id', currentUser.id);
+        if (error) throw new Error(error.message);
         document.getElementById('avatar-btn').textContent = name.charAt(0).toUpperCase();
         showToast('Name updated');
         input.blur();
