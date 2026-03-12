@@ -1507,13 +1507,15 @@
         if (!books || !books.length) { container.innerHTML = '<div class="empty-state"><h3>No books yet</h3><p>Add some books to see your stats.</p></div>'; return; }
 
         // currently_reading is optional — requires ALTER TABLE migration
-        const { data: crBooks } = await getSupabase()
-          .from('book_lists')
-          .select('title, thumbnail, authors, currently_reading')
-          .eq('user_id', currentUser.id)
-          .eq('currently_reading', true)
-          .catch(() => ({ data: [] }));
-        const nowReading = crBooks || [];
+        let nowReading = [];
+        try {
+          const { data: crBooks } = await getSupabase()
+            .from('book_lists')
+            .select('title, thumbnail, authors, currently_reading')
+            .eq('user_id', currentUser.id)
+            .eq('currently_reading', true);
+          nowReading = crBooks || [];
+        } catch { nowReading = []; }
 
         const thisYear = new Date().getFullYear();
         const readBooks    = books.filter(b => b.list_name === 'read');
