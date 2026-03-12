@@ -61,6 +61,9 @@
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem">
         <span class="count-badge" id="count-to-read">0</span>
+        <button class="import-hero-btn" onclick="exportList('to-read')" title="Export to CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        </button>
         <button class="import-hero-btn" onclick="openImport('to-read')" title="Import from CSV">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
         </button>
@@ -94,6 +97,9 @@
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem">
         <span class="count-badge" id="count-purchased">0</span>
+        <button class="import-hero-btn" onclick="exportList('purchased')" title="Export to CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        </button>
         <button class="import-hero-btn" onclick="openImport('purchased')" title="Import from CSV">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
         </button>
@@ -127,6 +133,9 @@
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem">
         <span class="count-badge" id="count-read">0</span>
+        <button class="import-hero-btn" onclick="exportList('read')" title="Export to CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        </button>
         <button class="import-hero-btn" onclick="openImport('read')" title="Import from CSV">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
         </button>
@@ -1281,6 +1290,37 @@
 
     // ── Import ─────────────────────────────────────────────────────────────
     let _importListName = null;
+
+    async function exportList(listName) {
+      const label = LIST_LABELS[listName]?.label || listName;
+      try {
+        const { data, error } = await getSupabase()
+          .from('book_lists')
+          .select('title, authors, rating, total_pages, finished_at, added_at, description')
+          .eq('user_id', currentUser.id)
+          .eq('list_name', listName)
+          .order('added_at', { ascending: false });
+        if (error) throw new Error(error.message);
+        if (!data || !data.length) { showToast(`No books in ${label} to export`); return; }
+        const escape = v => `"${String(v || '').replace(/"/g, '""')}"`;
+        const header = ['Title', 'Author', 'Rating', 'Total Pages', 'Finished Date', 'Date Added', 'Description'];
+        const rows = data.map(b => [
+          escape(b.title), escape(b.authors), escape(b.rating || ''),
+          escape(b.total_pages || ''),
+          escape(b.finished_at ? new Date(b.finished_at).toLocaleDateString() : ''),
+          escape(b.added_at ? new Date(b.added_at).toLocaleDateString() : ''),
+          escape(b.description),
+        ]);
+        const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${label.toLowerCase().replace(/\s+/g,'-')}-books.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast(`Exported ${data.length} books`);
+      } catch (err) { showToast('Export failed: ' + err.message); }
+    }
 
     function openImport(listName) {
       _importListName = listName;
