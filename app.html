@@ -972,10 +972,19 @@
       document.getElementById('scanner-modal').classList.add('open');
       document.getElementById('scanner-status').textContent = 'Point camera at the barcode on the back of the book';
       try {
-        _scanner = new Html5Qrcode('scanner-preview');
+        _scanner = new Html5Qrcode('scanner-preview', {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+          ],
+          verbose: false,
+        });
         await _scanner.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 280, height: 110 } },
+          { fps: 15, qrbox: { width: 280, height: 120 } },
           (isbn) => {
             closeScanner();
             document.getElementById('search-input').value = isbn;
