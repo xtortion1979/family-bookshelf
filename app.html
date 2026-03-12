@@ -364,11 +364,14 @@
           ? `<div class="carousel-finished">Finished ${new Date(entry.finished_at).toLocaleDateString('en-US',{month:'short',year:'numeric'})}</div>`
           : '';
         return `<div class="cover-carousel-item" onclick="openDetail('${id}','${listName}')">
-          <div class="carousel-cover-wrap">
-            ${entry.thumbnail
-              ? `<img class="carousel-cover" src="${escHtml(entry.thumbnail)}" alt="${escHtml(entry.title)}" loading="lazy">`
-              : `<div class="carousel-cover carousel-cover-ph"></div>`}
-            ${progressBar}
+          <div class="carousel-book-3d">
+            <div class="carousel-book-face">
+              ${entry.thumbnail
+                ? `<img class="carousel-cover" src="${escHtml(entry.thumbnail)}" alt="${escHtml(entry.title)}" loading="lazy">`
+                : `<div class="carousel-cover carousel-cover-ph"></div>`}
+              ${progressBar}
+            </div>
+            <div class="carousel-book-spine"></div>
           </div>
           <div class="carousel-title">${escHtml(entry.title)}</div>
           <div class="carousel-author">${escHtml(entry.authors || '')}</div>
