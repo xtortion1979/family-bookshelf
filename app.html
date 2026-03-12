@@ -204,6 +204,32 @@
     </div>
   </div>
 
+  <!-- Manual book entry modal -->
+  <div id="manual-entry-modal" class="modal-overlay" onclick="if(event.target===this)closeManualEntry()">
+    <div class="scanner-sheet" style="max-height:90vh;overflow-y:auto">
+      <div class="scanner-header">
+        <span class="scanner-title">Add Book Manually</span>
+        <button class="scanner-close" onclick="closeManualEntry()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.75rem;padding:.25rem 0 .5rem">
+        <input id="manual-title" class="scanner-isbn-input" style="width:100%;box-sizing:border-box" placeholder="Title *" autocomplete="off">
+        <input id="manual-author" class="scanner-isbn-input" style="width:100%;box-sizing:border-box" placeholder="Author" autocomplete="off">
+        <input id="manual-isbn" class="scanner-isbn-input" style="width:100%;box-sizing:border-box" placeholder="ISBN" autocomplete="off" inputmode="numeric">
+        <input id="manual-pages" class="scanner-isbn-input" style="width:100%;box-sizing:border-box" placeholder="Total pages" autocomplete="off" inputmode="numeric">
+        <textarea id="manual-desc" class="note-textarea" placeholder="Description (optional)" rows="3"></textarea>
+        <div style="font-size:.8rem;color:var(--gray-500);margin-top:-.25rem">Add to list:</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="manual-list-btns">
+          ${Object.entries(LIST_LABELS).map(([k, mi]) =>
+            `<button class="sort-btn" data-list="${k}" onclick="addManualBook('${k}')">${mi.label}</button>`
+          ).join('')}
+        </div>
+        <p id="manual-status" style="font-size:.8rem;color:#dc2626;min-height:1rem"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Add family member modal -->
   <div id="add-family-modal" class="modal-overlay" onclick="if(event.target===this)closeAddFamily()">
     <div class="scanner-sheet">
@@ -498,7 +524,11 @@
           searchCache = await searchOpenLibrary(digits);
         }
         if (!searchCache.length) {
-          el.innerHTML = `<div class="empty-state"><h3>No results found</h3><p>Try a different title or author</p></div>`;
+          el.innerHTML = `<div class="empty-state">
+            <h3>No results found</h3>
+            <p>This book isn't in any online catalog (common for self-published books).</p>
+            <button class="family-invite-btn" style="margin-top:.75rem" onclick="showManualEntry('${escHtml(isIsbn ? digits : '')}')">Enter book manually</button>
+          </div>`;
           return;
         }
         el.innerHTML = searchCache.map(b => renderSearchCard(b, myLists)).join('');
@@ -528,6 +558,53 @@
     }
 
     function showSearchHint() { /* replaced by loadRecentlyAdded */ }
+
+    function showManualEntry(isbn = '') {
+      document.getElementById('manual-title').value = '';
+      document.getElementById('manual-author').value = '';
+      document.getElementById('manual-isbn').value = isbn;
+      document.getElementById('manual-pages').value = '';
+      document.getElementById('manual-desc').value = '';
+      document.getElementById('manual-status').textContent = '';
+      document.getElementById('manual-entry-modal').classList.add('open');
+      setTimeout(() => document.getElementById('manual-title').focus(), 100);
+    }
+
+    function closeManualEntry() {
+      document.getElementById('manual-entry-modal').classList.remove('open');
+    }
+
+    async function addManualBook(listName) {
+      const title = document.getElementById('manual-title').value.trim();
+      const statusEl = document.getElementById('manual-status');
+      if (!title) { statusEl.textContent = 'Title is required.'; return; }
+      const author = document.getElementById('manual-author').value.trim();
+      const isbn = document.getElementById('manual-isbn').value.trim().replace(/[-\s]/g, '');
+      const pages = parseInt(document.getElementById('manual-pages').value) || null;
+      const desc = document.getElementById('manual-desc').value.trim();
+      // Use ISBN as ID if available, otherwise generate a unique ID
+      const bookId = isbn || `manual_${Date.now()}`;
+      const book = {
+        google_book_id: bookId,
+        title,
+        authors: author,
+        description: desc,
+        thumbnail: null,
+        published_date: '',
+        page_count: pages,
+      };
+      try {
+        statusEl.textContent = '';
+        await addBookToList(book, listName);
+        delete listCache[listName];
+        myLists[bookId] = (myLists[bookId] || new Set());
+        myLists[bookId].add(listName);
+        closeManualEntry();
+        showToast(`Added to ${LIST_LABELS[listName].label}`);
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + err.message;
+      }
+    }
 
     // ── Load a list ────────────────────────────────────────────────────────
     function filterList(listName, query) {
