@@ -1326,6 +1326,13 @@ body {
   outline: none;
 }
 .scanner-isbn-input:focus { border-color: #1e40af; }
+.manual-cover-label {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  border: 2px dashed var(--gray-300); border-radius: 8px; padding: .75rem;
+  cursor: pointer; color: var(--gray-500); font-size: .85rem; min-height: 56px;
+}
+.manual-cover-label:hover { border-color: var(--blue); color: var(--blue); }
+[data-theme="dark"] .manual-cover-label { border-color: #334155; color: #94a3b8; }
 .scanner-isbn-btn {
   padding: 0.6rem 1rem;
   background: #1e40af;

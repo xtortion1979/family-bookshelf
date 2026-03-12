@@ -219,8 +219,17 @@
         <input id="manual-isbn" class="scanner-isbn-input" style="width:100%;box-sizing:border-box" placeholder="ISBN" autocomplete="off" inputmode="numeric">
         <input id="manual-pages" class="scanner-isbn-input" style="width:100%;box-sizing:border-box" placeholder="Total pages" autocomplete="off" inputmode="numeric">
         <textarea id="manual-desc" class="note-textarea" placeholder="Description (optional)" rows="3"></textarea>
+        <div style="font-size:.8rem;color:var(--gray-500)">Cover image (optional)</div>
+        <label class="manual-cover-label" id="manual-cover-label" onclick="document.getElementById('manual-cover-input').click()">
+          <img id="manual-cover-preview" style="display:none;width:60px;height:80px;object-fit:cover;border-radius:4px">
+          <span id="manual-cover-hint">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Tap to choose photo
+          </span>
+        </label>
+        <input type="file" id="manual-cover-input" accept="image/*" style="display:none" onchange="previewCover(this)">
         <div style="font-size:.8rem;color:var(--gray-500);margin-top:-.25rem">Add to list:</div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="manual-list-btns">
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
           ${Object.entries(LIST_LABELS).map(([k, mi]) =>
             `<button class="sort-btn" data-list="${k}" onclick="addManualBook('${k}')">${mi.label}</button>`
           ).join('')}
@@ -519,9 +528,12 @@
       el.innerHTML = '<div class="loading-row"><span class="spinner"></span> Searching…</div>';
       try {
         searchCache = await searchBooks(q);
-        // If Google Books found nothing for an ISBN, try Open Library (covers 979-8 Amazon KDP books)
+        // If Google Books found nothing for an ISBN, try Open Library then community catalog
         if (!searchCache.length && isIsbn) {
           searchCache = await searchOpenLibrary(digits);
+        }
+        if (!searchCache.length && isIsbn) {
+          searchCache = await searchCommunityBooks(digits);
         }
         if (!searchCache.length) {
           el.innerHTML = `<div class="empty-state">
@@ -557,7 +569,33 @@
       } catch { return []; }
     }
 
+    async function searchCommunityBooks(isbn) {
+      try {
+        const { data } = await getSupabase().from('community_books').select('*').eq('isbn', isbn).maybeSingle();
+        if (!data) return [];
+        return [{
+          google_book_id: data.isbn || `cb_${data.id}`,
+          title: data.title,
+          authors: data.authors || '',
+          description: data.description || '',
+          thumbnail: data.thumbnail_url || null,
+          published_date: data.published_date || '',
+          page_count: data.page_count || null,
+        }];
+      } catch { return []; }
+    }
+
     function showSearchHint() { /* replaced by loadRecentlyAdded */ }
+
+    function previewCover(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const preview = document.getElementById('manual-cover-preview');
+      const hint = document.getElementById('manual-cover-hint');
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'block';
+      hint.style.display = 'none';
+    }
 
     function showManualEntry(isbn = '') {
       document.getElementById('manual-title').value = '';
@@ -566,6 +604,9 @@
       document.getElementById('manual-pages').value = '';
       document.getElementById('manual-desc').value = '';
       document.getElementById('manual-status').textContent = '';
+      document.getElementById('manual-cover-input').value = '';
+      document.getElementById('manual-cover-preview').style.display = 'none';
+      document.getElementById('manual-cover-hint').style.display = '';
       document.getElementById('manual-entry-modal').classList.add('open');
       setTimeout(() => document.getElementById('manual-title').focus(), 100);
     }
@@ -582,19 +623,40 @@
       const isbn = document.getElementById('manual-isbn').value.trim().replace(/[-\s]/g, '');
       const pages = parseInt(document.getElementById('manual-pages').value) || null;
       const desc = document.getElementById('manual-desc').value.trim();
-      // Use ISBN as ID if available, otherwise generate a unique ID
+      const coverFile = document.getElementById('manual-cover-input').files[0];
       const bookId = isbn || `manual_${Date.now()}`;
-      const book = {
-        google_book_id: bookId,
-        title,
-        authors: author,
-        description: desc,
-        thumbnail: null,
-        published_date: '',
-        page_count: pages,
-      };
+      statusEl.textContent = '';
+
       try {
-        statusEl.textContent = '';
+        let thumbnailUrl = null;
+
+        // Upload cover image if provided
+        if (coverFile) {
+          statusEl.textContent = 'Uploading cover…';
+          const ext = coverFile.name.split('.').pop();
+          const path = `covers/${bookId}.${ext}`;
+          const sb = getSupabase();
+          const { error: upErr } = await sb.storage.from('book-covers').upload(path, coverFile, { upsert: true });
+          if (upErr) throw new Error('Cover upload failed: ' + upErr.message);
+          const { data: urlData } = sb.storage.from('book-covers').getPublicUrl(path);
+          thumbnailUrl = urlData.publicUrl;
+        }
+
+        // Save to community_books so others can find it
+        if (title) {
+          statusEl.textContent = 'Saving to community catalog…';
+          const sb = getSupabase();
+          const userId = (await sb.auth.getUser()).data.user.id;
+          await sb.from('community_books').upsert({
+            isbn: isbn || null,
+            title, authors: author, description: desc,
+            thumbnail_url: thumbnailUrl, page_count: pages,
+            added_by: userId,
+          }, { onConflict: 'isbn', ignoreDuplicates: false });
+        }
+
+        statusEl.textContent = 'Adding to list…';
+        const book = { google_book_id: bookId, title, authors: author, description: desc, thumbnail: thumbnailUrl, published_date: '', page_count: pages };
         await addBookToList(book, listName);
         delete listCache[listName];
         myLists[bookId] = (myLists[bookId] || new Set());
