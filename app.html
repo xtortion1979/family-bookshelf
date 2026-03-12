@@ -1481,7 +1481,7 @@
           html += `<div class="rec-section">
             <div class="rec-section-title">📬 Recommended for you</div>
             ${recs.map(r => `
-              <div class="rec-card${r.seen ? ' rec-card-seen' : ''}" onclick="openDetail('${escHtml(r.google_book_id)}',null);markRecommendationSeen('${escHtml(r.id)}');this.classList.add('rec-card-seen')">
+              <div class="rec-card${r.seen ? ' rec-card-seen' : ''}" onclick="openFriendBook('${escHtml(r.google_book_id)}');markRecommendationSeen('${escHtml(r.id)}');this.classList.add('rec-card-seen')">
                 ${r.thumbnail ? `<img src="${escHtml(r.thumbnail)}" class="rec-card-thumb" alt="" onerror="this.style.display='none'">` : '<div class="rec-card-thumb rec-card-thumb-ph"></div>'}
                 <div class="rec-card-body">
                   <div class="rec-card-title">${escHtml(r.title||'')}</div>
@@ -1522,7 +1522,7 @@
       const listLabel = LIST_LABELS[familyActiveList]?.label || familyActiveList;
       const booksHtml = books.length
         ? books.map(b => `
-            <div class="family-book">
+            <div class="family-book" onclick="openFriendBook('${escHtml(b.google_book_id)}')" style="cursor:pointer">
               ${b.thumbnail
                 ? `<img class="family-book-cover" src="${escHtml(b.thumbnail)}" alt="" loading="lazy" onerror="this.style.display='none'">`
                 : `<div class="family-book-cover family-book-no-cover"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg></div>`}
@@ -1586,6 +1586,28 @@
         showToast(`${name} removed from followers`);
         loadFamily();
       } catch (err) { showToast('Error: ' + err.message); }
+    }
+
+    async function openFriendBook(googleBookId) {
+      // Check cache first
+      if (searchCache.find(b => b.google_book_id === googleBookId)) {
+        openDetail(googleBookId, null);
+        return;
+      }
+      // Fetch from Google Books by volume ID
+      try {
+        let url = `https://www.googleapis.com/books/v1/volumes/${encodeURIComponent(googleBookId)}`;
+        if (typeof GOOGLE_BOOKS_API_KEY !== 'undefined' && GOOGLE_BOOKS_API_KEY) url += `?key=${GOOGLE_BOOKS_API_KEY}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('Could not load book details');
+        const item = await resp.json();
+        const book = normalizeBook(item);
+        searchCache = searchCache.filter(b => b.google_book_id !== googleBookId);
+        searchCache.push(book);
+        openDetail(googleBookId, null);
+      } catch (err) {
+        showToast('Could not load book details');
+      }
     }
 
     // ── Book detail sheet ──────────────────────────────────────────────────
