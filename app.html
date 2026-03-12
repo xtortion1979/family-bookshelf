@@ -244,13 +244,13 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <p class="scanner-hint">Ask them to share their 8-character friend code (found at the top of their Friends tab), then enter it below to follow them and see their books.</p>
+      <p class="scanner-hint">Ask them to share their 8-character friend code (found at the top of their Friends tab), then enter it below to connect and see each other's books.</p>
       <div class="scanner-manual-row">
         <input type="text" id="family-code-input" class="scanner-isbn-input family-code-input"
           placeholder="ABCD1234" maxlength="8" autocomplete="off" autocorrect="off" autocapitalize="characters"
           oninput="this.value=this.value.toUpperCase()"
           onkeydown="if(event.key==='Enter')connectByCode()">
-        <button class="scanner-isbn-btn" onclick="connectByCode()">Follow</button>
+        <button class="scanner-isbn-btn" onclick="connectByCode()">Connect</button>
       </div>
       <p id="family-connect-status" class="scanner-status"></p>
     </div>
@@ -1362,12 +1362,15 @@
         const userId = (await sb.auth.getUser()).data.user.id;
         if (userId === profile.id) { statusEl.textContent = "That's your own code!"; statusEl.style.color = '#dc2626'; return; }
         const { error: insErr } = await sb.from('friends').upsert(
-          { follower_id: userId, following_id: profile.id },
+          [
+            { follower_id: userId, following_id: profile.id },
+            { follower_id: profile.id, following_id: userId },
+          ],
           { onConflict: 'follower_id,following_id' }
         );
         if (insErr) throw new Error(insErr.message);
         closeAddFamily();
-        showToast(`Now following ${profile.name || 'your friend'}!`);
+        showToast(`Connected with ${profile.name || 'your friend'}!`);
         loadFamily();
       } catch (err) {
         statusEl.textContent = err.message || 'Something went wrong.';
@@ -1685,17 +1688,12 @@
         const sb = getSupabase();
         const userId = (await sb.auth.getUser()).data.user.id;
 
-        // Who follows me, who I follow
-        const [{ data: followersData, error: e1 }, { data: followingData, error: e2 }] = await Promise.all([
-          sb.from('friends').select('follower_id, created_at').eq('following_id', userId),
-          sb.from('friends').select('following_id, created_at').eq('follower_id', userId),
-        ]);
+        // Bidirectional friends — get all connections
+        const { data: friendsData, error: e1 } = await sb.from('friends').select('follower_id, following_id').eq('follower_id', userId);
         if (e1) throw new Error(e1.message);
-        if (e2) throw new Error(e2.message);
 
-        const followerIds  = (followersData  || []).map(f => f.follower_id);
-        const followingIds = (followingData  || []).map(f => f.following_id);
-        const allIds = [...new Set([...followerIds, ...followingIds])];
+        const followingIds = (friendsData || []).map(f => f.following_id);
+        const allIds = [...new Set(followingIds)];
 
         // Profiles for everyone in our network
         let profiles = [];
@@ -1721,8 +1719,8 @@
             <div class="family-invite-prompt">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               <h3>No connections yet</h3>
-              <p>Share your code above with a friend, or tap <strong>+</strong> to enter their code and see their books.</p>
-              <button class="family-invite-btn" onclick="openAddFamily()">Follow Someone</button>
+              <p>Share your code above with a friend, or tap <strong>+</strong> to enter their code and connect.</p>
+              <button class="family-invite-btn" onclick="openAddFamily()">Add a Friend</button>
             </div>`;
           return;
         }
@@ -1749,20 +1747,12 @@
           </div>`;
         }
 
-        // Following section (people whose books I see)
+        // Friends section
         if (followingIds.length) {
-          html += `<div class="friends-section-title">📚 Following</div>`;
+          html += `<div class="friends-section-title">👥 Friends</div>`;
           const fp = profiles.filter(p => followingIds.includes(p.id));
           fp.sort((a,b) => (a.name||'').localeCompare(b.name||''));
           html += fp.map(p => renderFollowingCard(p, allBooks)).join('');
-        }
-
-        // Followers section (people who follow me)
-        if (followerIds.length) {
-          html += `<div class="friends-section-title">👥 Followers</div>`;
-          const fp = profiles.filter(p => followerIds.includes(p.id));
-          fp.sort((a,b) => (a.name||'').localeCompare(b.name||''));
-          html += fp.map(p => renderFollowerCard(p, followingIds.includes(p.id))).join('');
         }
 
         // Book clubs section
@@ -1797,7 +1787,7 @@
               <div class="family-name">${name}</div>
               <div class="family-count">${books.length} book${books.length!==1?'s':''}</div>
             </div>
-            <button class="family-disconnect-btn" onclick="unfollowUser('${escHtml(profile.id)}','${name}')" title="Unfollow">
+            <button class="family-disconnect-btn" onclick="disconnectUser('${escHtml(profile.id)}','${name}')" title="Remove friend">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
@@ -1805,44 +1795,16 @@
         </div>`;
     }
 
-    function renderFollowerCard(profile, alsoFollowing) {
-      const name = escHtml(profile.name || 'Unknown');
-      const initial = (profile.name || '?').charAt(0).toUpperCase();
-      return `
-        <div class="family-member" style="padding-bottom:.5rem">
-          <div class="family-member-header">
-            <div class="family-avatar">${initial}</div>
-            <div style="flex:1">
-              <div class="family-name">${name}</div>
-              <div class="family-count">${alsoFollowing ? 'You follow each other' : 'Following you'}</div>
-            </div>
-            <button class="family-disconnect-btn" onclick="removeFollower('${escHtml(profile.id)}','${name}')" title="Remove follower">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </div>
-        </div>`;
-    }
 
-    async function unfollowUser(followingId, name) {
-      if (!confirm(`Unfollow ${name}?`)) return;
+    async function disconnectUser(friendId, name) {
+      if (!confirm(`Remove ${name} as a friend?`)) return;
       try {
         const sb = getSupabase();
         const userId = (await sb.auth.getUser()).data.user.id;
-        const { error } = await sb.from('friends').delete().eq('follower_id', userId).eq('following_id', followingId);
-        if (error) throw error;
-        showToast(`Unfollowed ${name}`);
-        loadFamily();
-      } catch (err) { showToast('Error: ' + err.message); }
-    }
-
-    async function removeFollower(followerId, name) {
-      if (!confirm(`Remove ${name} from your followers?`)) return;
-      try {
-        const sb = getSupabase();
-        const userId = (await sb.auth.getUser()).data.user.id;
-        const { error } = await sb.from('friends').delete().eq('follower_id', followerId).eq('following_id', userId);
-        if (error) throw error;
-        showToast(`${name} removed from followers`);
+        // Remove both directions
+        await sb.from('friends').delete().eq('follower_id', userId).eq('following_id', friendId);
+        await sb.from('friends').delete().eq('follower_id', friendId).eq('following_id', userId);
+        showToast(`Removed ${name}`);
         loadFamily();
       } catch (err) { showToast('Error: ' + err.message); }
     }
