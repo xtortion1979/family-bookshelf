@@ -1443,6 +1443,81 @@ body {
 }
 .family-disconnect-btn:hover { color: var(--red); background: #fef2f2; }
 
+/* ── Detail utility row (Shop / Recommend) ───────────────────────────────── */
+.detail-utility-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.detail-util-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.5rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  background: var(--gray-50);
+  color: var(--gray-600);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, border-color .15s;
+}
+.detail-util-btn:hover { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+[data-theme="dark"] .detail-util-btn { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+[data-theme="dark"] .detail-util-btn:hover { background: #1e3a5f; border-color: #60a5fa; color: #60a5fa; }
+
+/* ── Recommend modal ─────────────────────────────────────────────────────── */
+.rec-book-info { margin-bottom: 0.75rem; }
+.rec-book-row { display: flex; align-items: center; gap: 0.75rem; }
+.rec-book-thumb { width: 48px; height: 68px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.rec-book-title { font-weight: 700; font-size: 0.9rem; color: var(--gray-800); }
+.rec-book-author { font-size: 0.8rem; color: var(--gray-400); margin-top: 0.15rem; }
+.rec-friends-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 180px; overflow-y: auto; }
+.rec-friend-btn {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid var(--gray-200); border-radius: 8px;
+  background: none; cursor: pointer; font-size: 0.875rem; font-weight: 600;
+  color: var(--gray-800); font-family: inherit; text-align: left;
+  transition: background .12s, border-color .12s;
+}
+.rec-friend-btn:hover { background: var(--blue-bg); border-color: var(--blue-light); }
+.rec-friend-btn.rec-friend-selected { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+.rec-friend-avatar {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--blue);
+  color: #fff; font-size: 0.75rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+[data-theme="dark"] .rec-friend-btn { border-color: #334155; color: #f1f5f9; }
+
+/* ── Recommendations section on Friends tab ──────────────────────────────── */
+.rec-section { margin-bottom: 1rem; }
+.rec-section-title { font-size: 0.875rem; font-weight: 700; color: var(--gray-800); padding: 0.25rem 0 0.5rem; }
+.rec-card {
+  display: flex; align-items: center; gap: 0.75rem;
+  background: var(--blue-bg); border: 1.5px solid var(--blue-light);
+  border-radius: var(--radius); padding: 0.75rem; margin-bottom: 0.5rem;
+  cursor: pointer; position: relative; transition: background .15s;
+}
+.rec-card-seen { background: var(--gray-50); border-color: var(--gray-200); }
+.rec-card-thumb { width: 44px; height: 62px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.rec-card-thumb-ph { width: 44px; height: 62px; border-radius: 4px; background: var(--gray-200); flex-shrink: 0; }
+.rec-card-body { flex: 1; min-width: 0; }
+.rec-card-title { font-weight: 700; font-size: 0.875rem; color: var(--gray-800); }
+.rec-card-author { font-size: 0.78rem; color: var(--gray-600); margin-top: 0.1rem; }
+.rec-card-from { font-size: 0.75rem; color: var(--gray-400); margin-top: 0.3rem; font-style: italic; }
+.rec-badge {
+  position: absolute; top: 0.5rem; right: 0.5rem;
+  background: var(--blue); color: #fff;
+  font-size: 0.65rem; font-weight: 700; border-radius: 999px; padding: 2px 7px;
+}
+[data-theme="dark"] .rec-card { background: #1e3a5f; border-color: #3b82f6; }
+[data-theme="dark"] .rec-card-seen { background: #1e293b; border-color: #334155; }
+
 /* ── Family invite prompt ────────────────────────────────────────────────── */
 .family-invite-prompt {
   text-align: center;

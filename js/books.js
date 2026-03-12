@@ -140,6 +140,35 @@ async function getAllProfiles() {
   return data || [];
 }
 
+async function sendRecommendation(receiverId, book, note) {
+  const userId = (await getSupabase().auth.getUser()).data.user.id;
+  const { error } = await getSupabase().from('recommendations').insert({
+    sender_id: userId,
+    receiver_id: receiverId,
+    google_book_id: book.google_book_id,
+    title: book.title,
+    authors: book.authors || '',
+    thumbnail: book.thumbnail || null,
+    note: note || null,
+  });
+  if (error) throw error;
+}
+
+async function getIncomingRecommendations() {
+  const userId = (await getSupabase().auth.getUser()).data.user.id;
+  const { data, error } = await getSupabase()
+    .from('recommendations')
+    .select('*, sender:profiles!recommendations_sender_id_fkey(name)')
+    .eq('receiver_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+async function markRecommendationSeen(id) {
+  await getSupabase().from('recommendations').update({ seen: true }).eq('id', id);
+}
+
 async function getRecentlyAdded(limit = 10) {
   const { data } = await getSupabase()
     .from('book_lists')

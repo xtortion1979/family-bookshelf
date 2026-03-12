@@ -150,16 +150,16 @@
     <div class="list-hero" style="background:linear-gradient(135deg,#5b21b6,#7c3aed)">
       <div class="list-hero-icon">👨‍👩‍👧‍👦</div>
       <div>
-        <div class="list-hero-title">Family</div>
+        <div class="list-hero-title">Friends</div>
         <div class="list-hero-sub">See what everyone is reading</div>
       </div>
-      <button class="import-hero-btn" onclick="openAddFamily()" title="Add family member">
+      <button class="import-hero-btn" onclick="openAddFamily()" title="Add friend">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
       </button>
     </div>
     <!-- My share code -->
     <div class="my-code-card">
-      <div class="my-code-label">Your family code — share this to connect</div>
+      <div class="my-code-label">Your friend code — share this to connect</div>
       <div class="my-code-row">
         <span class="my-code-value" id="my-share-code">••••••</span>
         <button class="my-code-copy" onclick="copyMyCode(this)">Copy</button>
@@ -192,7 +192,7 @@
   <div id="add-family-modal" class="modal-overlay" onclick="if(event.target===this)closeAddFamily()">
     <div class="scanner-sheet">
       <div class="scanner-header">
-        <span class="scanner-title">Add Family Member</span>
+        <span class="scanner-title">Add Friend</span>
         <button class="scanner-close" onclick="closeAddFamily()">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
@@ -206,6 +206,23 @@
         <button class="scanner-isbn-btn" onclick="connectByCode()">Connect</button>
       </div>
       <p id="family-connect-status" class="scanner-status"></p>
+    </div>
+  </div>
+
+  <!-- Recommend modal -->
+  <div id="recommend-modal" class="modal-overlay" onclick="if(event.target===this)closeRecommend()">
+    <div class="scanner-sheet">
+      <div class="scanner-header">
+        <span class="scanner-title">Recommend to Friend</span>
+        <button class="scanner-close" onclick="closeRecommend()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="recommend-book-info" class="rec-book-info"></div>
+      <div id="recommend-friends-list" class="rec-friends-list"></div>
+      <textarea id="recommend-note" class="note-textarea" placeholder="Add a note (optional)…" rows="2" style="margin:0.75rem 0 0.5rem"></textarea>
+      <button class="scanner-isbn-btn" style="width:100%" onclick="submitRecommend()">Send Recommendation</button>
+      <p id="recommend-status" class="scanner-status"></p>
     </div>
   </div>
 
@@ -229,7 +246,7 @@
     </button>
     <button class="nav-item" id="nav-family" onclick="switchView('family')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-      Family
+      Friends
     </button>
   </nav>
 
@@ -1068,7 +1085,85 @@
       }
     }
 
-    // ── Family view ────────────────────────────────────────────────────────
+    // ── Shop for book ──────────────────────────────────────────────────────
+    function shopForBook(title, authors) {
+      const q = encodeURIComponent(`${title} ${authors} buy book`);
+      window.open(`https://www.google.com/search?q=${q}`, '_blank');
+    }
+
+    // ── Recommend to friend ────────────────────────────────────────────────
+    let _recBookId = null;
+    let _recSelectedFriend = null;
+
+    async function openRecommend(googleBookId) {
+      _recBookId = googleBookId;
+      _recSelectedFriend = null;
+      document.getElementById('recommend-note').value = '';
+      document.getElementById('recommend-status').textContent = '';
+
+      // Show book info
+      const entry = _detailEntry;
+      document.getElementById('recommend-book-info').innerHTML = entry
+        ? `<div class="rec-book-row">
+            ${entry.thumbnail ? `<img src="${escHtml(entry.thumbnail)}" class="rec-book-thumb" alt="">` : ''}
+            <div><div class="rec-book-title">${escHtml(entry.title)}</div>
+            <div class="rec-book-author">${escHtml(entry.authors||'')}</div></div>
+           </div>` : '';
+
+      // Load connected friends
+      const listEl = document.getElementById('recommend-friends-list');
+      listEl.innerHTML = '<div class="loading-row"><span class="spinner"></span> Loading…</div>';
+      document.getElementById('recommend-modal').classList.add('open');
+
+      try {
+        const profiles = await getAllProfiles();
+        const friends = profiles.filter(p => p.id !== currentUser.id);
+        if (!friends.length) {
+          listEl.innerHTML = '<p style="color:var(--gray-400);font-size:.875rem;padding:.5rem 0">No friends connected yet.</p>';
+          return;
+        }
+        listEl.innerHTML = friends.map(p =>
+          `<button class="rec-friend-btn" data-id="${escHtml(p.id)}" onclick="selectRecFriend(this,'${escHtml(p.id)}')">
+            <span class="rec-friend-avatar">${escHtml((p.name||'?').charAt(0).toUpperCase())}</span>
+            ${escHtml(p.name||'Unknown')}
+          </button>`
+        ).join('');
+      } catch (err) {
+        listEl.innerHTML = '<p style="color:var(--red);font-size:.875rem">Could not load friends.</p>';
+      }
+    }
+
+    function selectRecFriend(btn, userId) {
+      _recSelectedFriend = userId;
+      document.querySelectorAll('.rec-friend-btn').forEach(b => b.classList.remove('rec-friend-selected'));
+      btn.classList.add('rec-friend-selected');
+    }
+
+    function closeRecommend() {
+      document.getElementById('recommend-modal').classList.remove('open');
+    }
+
+    async function submitRecommend() {
+      if (!_recSelectedFriend) {
+        document.getElementById('recommend-status').textContent = 'Please select a friend first.';
+        return;
+      }
+      const note = document.getElementById('recommend-note').value.trim();
+      const entry = _detailEntry;
+      if (!entry) return;
+      const statusEl = document.getElementById('recommend-status');
+      statusEl.textContent = '';
+      try {
+        await sendRecommendation(_recSelectedFriend, entry, note);
+        closeRecommend();
+        showToast('Recommendation sent!');
+      } catch (err) {
+        statusEl.textContent = err.message || 'Failed to send.';
+        statusEl.style.color = '#dc2626';
+      }
+    }
+
+    // ── Friends view ───────────────────────────────────────────────────────
     let familyActiveList = 'to-read';
 
     async function loadFamily(listName) {
@@ -1086,7 +1181,9 @@
       }).catch(() => {});
 
       try {
-        const [allBooks, profiles] = await Promise.all([getAllFamilyBooks(), getAllProfiles()]);
+        const [allBooks, profiles, recs] = await Promise.all([
+          getAllFamilyBooks(), getAllProfiles(), getIncomingRecommendations()
+        ]);
 
         // Filter to only connected members (not current user)
         const others = profiles.filter(p => p.id !== currentUser.id);
@@ -1096,16 +1193,35 @@
             <div class="family-invite-prompt">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               <h3>No connections yet</h3>
-              <p>Share your family code above with someone, or tap <strong>+</strong> to enter theirs.</p>
-              <button class="family-invite-btn" onclick="openAddFamily()">Add Family Member</button>
+              <p>Share your friend code above with someone, or tap <strong>+</strong> to enter theirs.</p>
+              <button class="family-invite-btn" onclick="openAddFamily()">Add Friend</button>
             </div>`;
           return;
         }
 
         others.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        container.innerHTML = others.map(p => renderFamilyMember(p, allBooks)).join('');
+
+        // Recommendations section
+        let recsHtml = '';
+        if (recs.length) {
+          recsHtml = `<div class="rec-section">
+            <div class="rec-section-title">📬 Recommended for you</div>
+            ${recs.map(r => `
+              <div class="rec-card${r.seen ? ' rec-card-seen' : ''}" onclick="openDetail('${escHtml(r.google_book_id)}',null);markRecommendationSeen('${escHtml(r.id)}');this.classList.add('rec-card-seen')">
+                ${r.thumbnail ? `<img src="${escHtml(r.thumbnail)}" class="rec-card-thumb" alt="" onerror="this.style.display='none'">` : '<div class="rec-card-thumb rec-card-thumb-ph"></div>'}
+                <div class="rec-card-body">
+                  <div class="rec-card-title">${escHtml(r.title||'')}</div>
+                  <div class="rec-card-author">${escHtml(r.authors||'')}</div>
+                  <div class="rec-card-from">From ${escHtml(r.sender?.name||'Someone')}${r.note ? ` · "${escHtml(r.note)}"` : ''}</div>
+                </div>
+                ${!r.seen ? '<span class="rec-badge">New</span>' : ''}
+              </div>`).join('')}
+          </div>`;
+        }
+
+        container.innerHTML = recsHtml + others.map(p => renderFamilyMember(p, allBooks)).join('');
       } catch (err) {
-        container.innerHTML = `<div class="empty-state"><h3>Error loading family</h3><p>${escHtml(err.message)}</p></div>`;
+        container.innerHTML = `<div class="empty-state"><h3>Error loading friends</h3><p>${escHtml(err.message)}</p></div>`;
       }
     }
 
@@ -1220,6 +1336,17 @@
           <button class="note-save-btn" style="margin-top:0.35rem" onclick="detailSaveNote()">Save note</button>
         </div>
 
+        <div class="detail-utility-row">
+          <button class="detail-util-btn" onclick="shopForBook('${escHtml(entry.title)}','${escHtml(entry.authors||'')}')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m5-9v9m4-9v9m5-9l-2 9"/></svg>
+            Shop for this book
+          </button>
+          <button class="detail-util-btn" onclick="openRecommend('${escHtml(googleBookId)}')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m6.632 8.726a3 3 0 10-5.432-2.684m5.432 2.684a3 3 0 01-5.432-2.684m0 0L9.684 13.342"/></svg>
+            Recommend to friend
+          </button>
+        </div>
+
         <div class="detail-actions">
           ${Object.entries(LIST_LABELS).filter(([k]) => k !== listName).map(([k, mi]) =>
             `<button class="detail-move-btn" onclick="detailMove('${escHtml(googleBookId)}','${listName}','${k}')">
@@ -1228,6 +1355,16 @@
           ).join('')}
           <button class="detail-remove-btn" onclick="detailRemove('${escHtml(googleBookId)}','${listName}')">Remove from list</button>
         </div>` : `
+        <div class="detail-utility-row">
+          <button class="detail-util-btn" onclick="shopForBook('${escHtml(entry.title)}','${escHtml(entry.authors||'')}')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m5-9v9m4-9v9m5-9l-2 9"/></svg>
+            Shop for this book
+          </button>
+          <button class="detail-util-btn" onclick="openRecommend('${escHtml(googleBookId)}')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m6.632 8.726a3 3 0 10-5.432-2.684m5.432 2.684a3 3 0 01-5.432-2.684m0 0L9.684 13.342"/></svg>
+            Recommend to friend
+          </button>
+        </div>
         <div class="detail-actions">
           ${Object.entries(LIST_LABELS).map(([k, mi]) =>
             `<button class="detail-move-btn" onclick="detailAdd('${escHtml(googleBookId)}','${k}',this)">
