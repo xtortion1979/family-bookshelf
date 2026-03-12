@@ -1534,6 +1534,8 @@ body {
 /* ── Recommendations section on Friends tab ──────────────────────────────── */
 .rec-section { margin-bottom: 1rem; }
 .rec-section-title { font-size: 0.875rem; font-weight: 700; color: var(--gray-800); padding: 0.25rem 0 0.5rem; }
+.friends-section-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--gray-500); padding: 1rem 0 0.4rem; border-top: 1px solid var(--gray-200); margin-top: .25rem; }
+.friends-section-title:first-child { border-top: none; margin-top: 0; }
 .rec-card {
   display: flex; align-items: center; gap: 0.75rem;
   background: var(--blue-bg); border: 1.5px solid var(--blue-light);
