@@ -1014,7 +1014,7 @@ body {
   transition: all .15s;
 }
 .sort-btn:hover { border-color: #1e40af; color: #1e40af; }
-.sort-btn-active { background: #1e40af; border-color: #1e40af; color: #fff; }
+.sort-btn-active { background: #eff6ff; border-color: #1e40af; color: #1e40af; font-weight: 600; }
 
 /* ── Stars ───────────────────────────────────────────────────────────────── */
 .star-row {
