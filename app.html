@@ -483,8 +483,13 @@
 
     // ── Search ─────────────────────────────────────────────────────────────
     async function doSearch() {
-      const q = document.getElementById('search-input').value.trim();
-      if (!q) return;
+      const raw = document.getElementById('search-input').value.trim();
+      if (!raw) return;
+      // If input looks like an ISBN (digits/hyphens starting with 978 or 979), use isbn: prefix
+      const digits = raw.replace(/[-\s]/g, '');
+      const q = (digits.length >= 10 && (digits.startsWith('978') || digits.startsWith('979')))
+        ? `isbn:${digits}`
+        : raw;
       const el = document.getElementById('search-results');
       document.getElementById('recent-section').style.display = 'none';
       el.innerHTML = '<div class="loading-row"><span class="spinner"></span> Searching…</div>';
