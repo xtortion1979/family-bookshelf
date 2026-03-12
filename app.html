@@ -2493,6 +2493,11 @@
       if (listName && entry.series_name) {
         loadSeriesOthers(entry.series_name, googleBookId);
       }
+
+      // Try to auto-detect series if none is set
+      if (listName && !entry.series_name) {
+        tryAutoFillSeries();
+      }
     }
 
     function closeDetail() {
@@ -2672,6 +2677,52 @@
     }
 
     // ── Series tracking ───────────────────────────────────────────────────
+
+    function _parseSeriesFromTitle(title, subtitle) {
+      const text = [title, subtitle].filter(Boolean).join(' ');
+      const patterns = [
+        /\(([^,)]+),\s*(?:Book|Vol\.?|Volume|#)\s*(\d+)\)/i,
+        /\(([^,)]+)\s+(?:Book|Vol\.?|Volume)\s*(\d+)\)/i,
+        /\(([^)]+)\s+#(\d+)\)/i,
+        /\(([^,)]+),\s*#(\d+)\)/i,
+      ];
+      for (const re of patterns) {
+        const m = text.match(re);
+        if (m) return { name: m[1].trim(), order: parseInt(m[2]) };
+      }
+      return null;
+    }
+
+    async function tryAutoFillSeries() {
+      if (!_detailEntry || !_detailListName) return;
+      const nameEl  = document.getElementById('detail-series-name');
+      const orderEl = document.getElementById('detail-series-order');
+      if (!nameEl || nameEl.value) return; // already filled
+
+      // 1. Try parsing title/subtitle
+      const parsed = _parseSeriesFromTitle(_detailEntry.title, _detailEntry.subtitle);
+      if (parsed) {
+        nameEl.value  = parsed.name;
+        orderEl.value = parsed.order || '';
+        showToast('Series auto-detected — tap outside to save');
+        return;
+      }
+
+      // 2. Try Open Library by title + first author
+      try {
+        const title  = encodeURIComponent(_detailEntry.title || '');
+        const author = encodeURIComponent((_detailEntry.authors || '').split(',')[0].trim());
+        const resp = await fetch(`https://openlibrary.org/search.json?title=${title}&author=${author}&fields=series,title&limit=3`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const doc = (data.docs || []).find(d => d.series && d.series.length);
+        if (doc) {
+          nameEl.value = doc.series[0];
+          showToast('Series found via Open Library — tap outside to save');
+        }
+      } catch { /* silent fail */ }
+    }
+
     async function detailSaveSeriesMeta() {
       if (!_detailEntry || !_detailListName) return;
       const nameEl  = document.getElementById('detail-series-name');
