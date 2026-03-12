@@ -551,14 +551,20 @@
       if (!currentUser) return;
 
       // Show avatar / name
-      const { data: profileData } = await getSupabase().from('profiles')
+      const { data: profileData, error: profileErr } = await getSupabase().from('profiles')
         .select('name, avatar_url').eq('id', currentUser.id).maybeSingle();
+      if (profileErr) console.warn('Profile load error:', profileErr.message);
       const name = profileData?.name || currentUser.email.split('@')[0];
       document.getElementById('avatar-btn').textContent  = name.charAt(0).toUpperCase();
       document.getElementById('profile-name').value        = name;
       document.getElementById('profile-email').textContent = currentUser.email;
       if (profileData?.avatar_url) {
-        document.getElementById('avatar-btn').innerHTML = `<img src="${profileData.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='${name.charAt(0).toUpperCase()}'">`;
+        const avatarImg = new Image();
+        avatarImg.onload = () => {
+          document.getElementById('avatar-btn').innerHTML = `<img src="${profileData.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        };
+        avatarImg.onerror = () => console.warn('Avatar image failed to load:', profileData.avatar_url);
+        avatarImg.src = profileData.avatar_url;
       }
 
       // Pre-load which books are already in lists
