@@ -239,12 +239,14 @@ body {
   gap: 0.75rem;
 }
 .top-bar-logo {
-  font-weight: 800;
-  font-size: 1.1rem;
-  color: var(--blue);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--gray-800);
   flex: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
 }
+[data-theme="dark"] .top-bar-logo { color: #f1f5f9; }
 .dark-toggle {
   background: none;
   border: none;
@@ -372,17 +374,42 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.25rem 1.25rem 1rem;
+  padding: 1.4rem 1.25rem 1.2rem;
   margin-bottom: 0;
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: none;
+  position: relative;
+  overflow: hidden;
 }
-.list-hero-blue   { background: linear-gradient(135deg,#1e40af,#3b82f6); }
-.list-hero-amber  { background: linear-gradient(135deg,#92400e,#d97706); }
-.list-hero-green  { background: linear-gradient(135deg,#14532d,#16a34a); }
-.list-hero-icon   { font-size: 2rem; flex-shrink: 0; }
+.list-hero::after {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.07);
+  pointer-events: none;
+}
+.list-hero-blue   { background: linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); }
+.list-hero-amber  { background: linear-gradient(135deg,#78350f 0%,#d97706 100%); }
+.list-hero-green  { background: linear-gradient(135deg,#14532d 0%,#16a34a 100%); }
+.list-hero-icon   {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.15);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
 .list-hero > div  { flex: 1; }
-.list-hero-title  { color: #fff; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
-.list-hero-sub    { color: rgba(255,255,255,.75); font-size: 0.8rem; margin-top: 2px; }
+.list-hero-title  {
+  font-family: 'Playfair Display', Georgia, serif;
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.list-hero-sub    { color: rgba(255,255,255,.7); font-size: 0.78rem; margin-top: 3px; font-weight: 400; }
 .list-hero .count-badge {
   background: rgba(255,255,255,.2);
   color: #fff;
