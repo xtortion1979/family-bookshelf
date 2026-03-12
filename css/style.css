@@ -1852,3 +1852,119 @@ body {
   .top-bar    { position: sticky; left: unset; right: unset; transform: none; max-width: 100%; }
   .bottom-nav { max-width: 680px; left: 50%; right: auto; transform: translateX(-50%); }
 }
+
+/* ── Onboarding overlay ──────────────────────────────────────────────────── */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, #1e3a8a 0%, #5b21b6 100%);
+  z-index: 600;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.75rem 3rem;
+  text-align: center;
+}
+.onboarding-overlay.open { display: flex; }
+.onboarding-skip {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: rgba(255,255,255,.85);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.onboarding-slides { width: 100%; max-width: 340px; }
+.onboarding-slide { display: none; }
+.onboarding-slide.active { display: block; }
+.onboarding-icon { font-size: 3.5rem; margin-bottom: 1.5rem; line-height: 1; }
+.onboarding-heading {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+.onboarding-body {
+  font-size: 1rem;
+  color: rgba(255,255,255,.8);
+  line-height: 1.6;
+  max-width: 280px;
+  margin: 0 auto;
+}
+.onboarding-body strong { color: #fff; }
+.onboarding-dots { display: flex; gap: 0.5rem; margin-top: 2.5rem; }
+.onboarding-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.3);
+  transition: background .2s, transform .2s;
+}
+.onboarding-dot-active { background: #fff; transform: scale(1.25); }
+.onboarding-nav { display: flex; gap: 0.75rem; margin-top: 1.5rem; align-items: center; }
+.onboarding-back-btn {
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+  min-width: 90px;
+}
+.onboarding-next-btn {
+  background: #fff;
+  border: none;
+  color: #1e3a8a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.75rem 2rem;
+  border-radius: 10px;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+/* ── Series badge (book cards) ───────────────────────────────────────────── */
+.series-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--purple);
+  background: var(--purple-bg);
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  margin-bottom: 0.2rem;
+}
+
+/* ── Series section (detail sheet) ──────────────────────────────────────── */
+.detail-series-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.series-others-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--gray-400);
+  margin-bottom: 0.4rem;
+}
+.series-other-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  cursor: pointer;
+  border-bottom: 1px solid var(--gray-100);
+}
+.series-other-row:last-child { border-bottom: none; }
+[data-theme="dark"] .series-other-row { border-color: #334155; }

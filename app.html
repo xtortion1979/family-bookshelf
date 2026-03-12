@@ -461,6 +461,43 @@
     <button id="toast-undo" style="display:none" onclick="undoRemove()">Undo</button>
   </div>
 
+  <!-- Onboarding overlay -->
+  <div id="onboarding-overlay" class="onboarding-overlay">
+    <button class="onboarding-skip" onclick="finishOnboarding()">Skip</button>
+    <div class="onboarding-slides">
+      <div class="onboarding-slide active">
+        <div class="onboarding-icon">📚</div>
+        <h2 class="onboarding-heading">Welcome to<br>Family Bookshelf</h2>
+        <p class="onboarding-body">Your personal library and reading tracker — always in your pocket.</p>
+      </div>
+      <div class="onboarding-slide">
+        <div class="onboarding-icon">🔍</div>
+        <h2 class="onboarding-heading">Build Your Library</h2>
+        <p class="onboarding-body">Search millions of titles and save them to your <strong>To Read</strong>, <strong>Purchased</strong>, or <strong>Read</strong> lists.</p>
+      </div>
+      <div class="onboarding-slide">
+        <div class="onboarding-icon">⭐</div>
+        <h2 class="onboarding-heading">Track Your Reading</h2>
+        <p class="onboarding-body">Rate books, mark what you're currently reading, and watch your reading stats grow over time.</p>
+      </div>
+      <div class="onboarding-slide">
+        <div class="onboarding-icon">👥</div>
+        <h2 class="onboarding-heading">Connect with Friends</h2>
+        <p class="onboarding-body">Share your friend code from your profile and see what the people you care about are reading.</p>
+      </div>
+    </div>
+    <div class="onboarding-dots" id="onboarding-dots">
+      <span class="onboarding-dot onboarding-dot-active"></span>
+      <span class="onboarding-dot"></span>
+      <span class="onboarding-dot"></span>
+      <span class="onboarding-dot"></span>
+    </div>
+    <div class="onboarding-nav">
+      <button class="onboarding-back-btn" id="onboarding-back" onclick="onboardingBack()" style="visibility:hidden">Back</button>
+      <button class="onboarding-next-btn" id="onboarding-next" onclick="onboardingNext()">Next</button>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
@@ -585,6 +622,9 @@
       // Restore last active tab
       const lastView = localStorage.getItem('lastView');
       if (lastView && lastView !== 'search') switchView(lastView);
+
+      // Show onboarding for new users (after lastView restore so finishOnboarding's switchView wins)
+      checkOnboarding();
     })();
 
     // ── View switching ─────────────────────────────────────────────────────
@@ -2379,6 +2419,21 @@
         </div>
 
         <div class="detail-section">
+          <div class="detail-section-label">Series</div>
+          <div class="detail-series-row">
+            <input id="detail-series-name" class="progress-input" style="flex:2;min-width:0"
+              placeholder="Series name" value="${escHtml(entry.series_name || '')}"
+              onblur="detailSaveSeriesMeta()">
+            <span class="progress-sep">#</span>
+            <input id="detail-series-order" class="progress-input" style="flex:0 0 56px;text-align:center"
+              type="number" placeholder="Order" min="1"
+              value="${entry.series_order != null ? entry.series_order : ''}"
+              onblur="detailSaveSeriesMeta()">
+          </div>
+          <div id="detail-series-others" style="margin-top:0.5rem"></div>
+        </div>
+
+        <div class="detail-section">
           <div class="detail-section-label">Notes</div>
           <textarea id="detail-notes" class="note-textarea" placeholder="Add a note…">${escHtml(entry.notes || '')}</textarea>
           <button class="note-save-btn" style="margin-top:0.35rem" onclick="detailSaveNote()">Save note</button>
@@ -2433,6 +2488,11 @@
       `;
 
       document.getElementById('detail-modal').classList.add('open');
+
+      // Load series siblings if this book belongs to a series
+      if (listName && entry.series_name) {
+        loadSeriesOthers(entry.series_name, googleBookId);
+      }
     }
 
     function closeDetail() {
@@ -2571,6 +2631,86 @@
           </div>`;
         }).join('');
       } catch (_) {}
+    }
+
+    // ── Onboarding ────────────────────────────────────────────────────────
+    let _obSlide = 0;
+    const OB_COUNT = 4;
+
+    function checkOnboarding() {
+      if (!currentUser) return;
+      if (localStorage.getItem('onboarding_' + currentUser.id) === 'done') return;
+      _obSlide = 0;
+      _obUpdateSlide();
+      document.getElementById('onboarding-overlay').classList.add('open');
+    }
+
+    function _obUpdateSlide() {
+      document.querySelectorAll('.onboarding-slide').forEach((s, i) => s.classList.toggle('active', i === _obSlide));
+      document.querySelectorAll('.onboarding-dot').forEach((d, i) => d.classList.toggle('onboarding-dot-active', i === _obSlide));
+      document.getElementById('onboarding-back').style.visibility = _obSlide === 0 ? 'hidden' : 'visible';
+      document.getElementById('onboarding-next').textContent = _obSlide === OB_COUNT - 1 ? 'Get Started' : 'Next';
+    }
+
+    function onboardingNext() {
+      if (_obSlide < OB_COUNT - 1) { _obSlide++; _obUpdateSlide(); }
+      else finishOnboarding();
+    }
+
+    function onboardingBack() {
+      if (_obSlide > 0) { _obSlide--; _obUpdateSlide(); }
+    }
+
+    function finishOnboarding() {
+      if (currentUser) localStorage.setItem('onboarding_' + currentUser.id, 'done');
+      document.getElementById('onboarding-overlay').classList.remove('open');
+      switchView('search');
+    }
+
+    // ── Series tracking ───────────────────────────────────────────────────
+    async function detailSaveSeriesMeta() {
+      if (!_detailEntry || !_detailListName) return;
+      const nameEl  = document.getElementById('detail-series-name');
+      const orderEl = document.getElementById('detail-series-order');
+      if (!nameEl || !orderEl) return;
+      const seriesName  = nameEl.value.trim() || null;
+      const seriesOrder = orderEl.value !== '' ? parseInt(orderEl.value) || null : null;
+      try {
+        await updateBookMeta(_detailEntry.google_book_id, _detailListName, { series_name: seriesName, series_order: seriesOrder });
+        _detailEntry.series_name  = seriesName;
+        _detailEntry.series_order = seriesOrder;
+        const cached = (listCache[_detailListName] || []).find(e => e.google_book_id === _detailEntry.google_book_id);
+        if (cached) { cached.series_name = seriesName; cached.series_order = seriesOrder; }
+        if (seriesName) loadSeriesOthers(seriesName, _detailEntry.google_book_id);
+        else { const el = document.getElementById('detail-series-others'); if (el) el.innerHTML = ''; }
+        showToast('Series saved');
+      } catch { showToast('Error saving series'); }
+    }
+
+    async function loadSeriesOthers(seriesName, currentBookId) {
+      const el = document.getElementById('detail-series-others');
+      if (!el) return;
+      try {
+        const { data } = await getSupabase()
+          .from('book_lists')
+          .select('google_book_id, title, series_order, thumbnail, list_name')
+          .eq('user_id', currentUser.id)
+          .ilike('series_name', seriesName)
+          .neq('google_book_id', currentBookId)
+          .order('series_order', { ascending: true });
+        if (!data || !data.length) { el.innerHTML = ''; return; }
+        const seen = new Set();
+        const unique = data.filter(b => { if (seen.has(b.google_book_id)) return false; seen.add(b.google_book_id); return true; });
+        el.innerHTML = `<div class="series-others-label">Also in this series</div>` +
+          unique.map(b => `
+            <div class="series-other-row" onclick="closeDetail();setTimeout(()=>openDetail('${escHtml(b.google_book_id)}','${escHtml(b.list_name)}'),50)">
+              ${b.thumbnail ? `<img src="${escHtml(b.thumbnail)}" style="width:28px;height:40px;object-fit:cover;border-radius:3px;flex-shrink:0" alt="">` : '<div style="width:28px;height:40px;background:var(--gray-100);border-radius:3px;flex-shrink:0"></div>'}
+              <div style="min-width:0">
+                <div style="font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(b.title)}</div>
+                ${b.series_order != null ? `<div style="font-size:.7rem;color:var(--gray-400)">#${b.series_order} · ${escHtml(LIST_LABELS[b.list_name]?.label || b.list_name)}</div>` : ''}
+              </div>
+            </div>`).join('');
+      } catch { el.innerHTML = ''; }
     }
   </script>
 </body>

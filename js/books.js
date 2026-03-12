@@ -339,6 +339,7 @@ function renderListCard(entry, listName) {
     <div class="book-info">
       <span class="list-badge ${info.badge}">${info.label}</span>
       <div class="book-title detail-tap" onclick="openDetail('${id}','${listName}')">${escHtml(entry.title)}</div>
+      ${entry.series_name ? `<div class="series-badge">${escHtml(entry.series_name)}${entry.series_order != null ? ' · #' + entry.series_order : ''}</div>` : ''}
       <div class="book-author">${escHtml(entry.authors || '')}</div>
       ${entry.published_date ? `<div class="book-year">${escHtml(entry.published_date.slice(0,4))}</div>` : ''}
       ${finishedHtml}
