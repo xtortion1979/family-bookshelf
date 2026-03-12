@@ -87,7 +87,7 @@ async function getList(listName) {
 
 async function ensureShareCode() {
   const userId = (await getSupabase().auth.getUser()).data.user.id;
-  const { data, error: selErr } = await getSupabase().from('profiles').select('share_code').eq('id', userId).single();
+  const { data, error: selErr } = await getSupabase().from('profiles').select('share_code').eq('id', userId).maybeSingle();
   if (selErr) throw new Error('Could not load profile: ' + selErr.message);
   if (data?.share_code) return data.share_code;
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
