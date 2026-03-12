@@ -1402,13 +1402,16 @@
       try {
         const sb = getSupabase();
         const userId = (await sb.auth.getUser()).data.user.id;
+        // Try to get existing code first
         const { data, error: selErr } = await sb.from('profiles').select('share_code').eq('id', userId).maybeSingle();
         if (selErr) throw new Error(selErr.message);
         if (data?.share_code) { el.textContent = data.share_code; return; }
+        // No code yet — generate one and upsert (handles missing profile row too)
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         const code = Array.from({length: 8}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-        const { error: updErr } = await sb.from('profiles').update({ share_code: code }).eq('id', userId);
-        if (updErr) throw new Error(updErr.message);
+        const { error: upsErr } = await sb.from('profiles')
+          .upsert({ id: userId, share_code: code }, { onConflict: 'id' });
+        if (upsErr) throw new Error(upsErr.message);
         el.textContent = code;
       } catch (err) {
         el.textContent = 'Error: ' + err.message;
