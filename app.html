@@ -2717,7 +2717,9 @@
       const book = searchCache.find(b => b.google_book_id === googleBookId);
       if (!book) return;
       try {
-        const extra = listName === 'purchased' && book.page_count ? { total_pages: book.page_count } : {};
+        const extra = listName === 'read'
+          ? { finished_at: new Date().toISOString() }
+          : listName === 'purchased' && book.page_count ? { total_pages: book.page_count } : {};
         await addToList(book, listName, extra);
         logActivity(listName === 'read' ? 'finished_book' : 'added_book', book, listName);
         if (!myLists[googleBookId]) myLists[googleBookId] = new Set();
