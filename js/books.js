@@ -171,7 +171,8 @@ async function getConnectedFriendProfiles() {
   const { data: friendRows, error: fErr } = await getSupabase()
     .from('friends')
     .select('following_id')
-    .eq('follower_id', userId);
+    .eq('follower_id', userId)
+    .eq('status', 'accepted');
   if (fErr) throw new Error(fErr.message);
   const ids = (friendRows || []).map(r => r.following_id);
   if (!ids.length) return [];

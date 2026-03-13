@@ -1751,6 +1751,47 @@ body {
 [data-theme="dark"] .rec-card { background: #1e3a5f; border-color: #3b82f6; }
 [data-theme="dark"] .rec-card-seen { background: #1e293b; border-color: #334155; }
 
+.follow-requests-section {
+  background: #fffbeb;
+  border: 1.5px solid #fbbf24;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.follow-request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #fef3c7;
+}
+.follow-request-row:last-child { border-bottom: none; }
+.follow-request-name { font-weight: 600; font-size: 0.9rem; color: #1f2937; }
+.follow-accept-btn {
+  padding: 0.3rem 0.75rem;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.follow-decline-btn {
+  padding: 0.3rem 0.75rem;
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+[data-theme="dark"] .follow-requests-section { background: #2d1f00; border-color: #d97706; }
+[data-theme="dark"] .follow-request-row { border-color: #3d2a00; }
+[data-theme="dark"] .follow-request-name { color: #f1f5f9; }
+[data-theme="dark"] .follow-decline-btn { background: #334155; color: #f1f5f9; }
+
 /* ── Stats view ──────────────────────────────────────────────────────────── */
 .stats-grid {
   display: grid;

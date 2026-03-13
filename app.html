@@ -1607,16 +1607,17 @@
         if (!profile) { statusEl.textContent = 'Code not found — double-check and try again.'; statusEl.style.color = '#dc2626'; return; }
         const userId = (await sb.auth.getUser()).data.user.id;
         if (userId === profile.id) { statusEl.textContent = "That's your own code!"; statusEl.style.color = '#dc2626'; return; }
-        const { error: insErr } = await sb.from('friends').upsert(
-          [
-            { follower_id: userId, following_id: profile.id },
-            { follower_id: profile.id, following_id: userId },
-          ],
-          { onConflict: 'follower_id,following_id' }
-        );
+        // Check not already following
+        const { data: existing } = await sb.from('friends').select('status').eq('follower_id', userId).eq('following_id', profile.id).maybeSingle();
+        if (existing) {
+          statusEl.textContent = existing.status === 'pending' ? 'Follow request already sent.' : 'You already follow this person.';
+          statusEl.style.color = '#d97706';
+          return;
+        }
+        const { error: insErr } = await sb.from('friends').insert({ follower_id: userId, following_id: profile.id, status: 'pending' });
         if (insErr) throw new Error(insErr.message);
         closeAddFamily();
-        showToast(`Connected with ${profile.name || 'your friend'}!`);
+        showToast(`Follow request sent to ${profile.name || 'your friend'}!`);
         loadFamily();
       } catch (err) {
         statusEl.textContent = err.message || 'Something went wrong.';
@@ -1932,8 +1933,27 @@
         const sb = getSupabase();
         const userId = (await sb.auth.getUser()).data.user.id;
 
-        // Bidirectional friends — get all connections
-        const { data: friendsData, error: e1 } = await sb.from('friends').select('follower_id, following_id').eq('follower_id', userId);
+        // Load pending follow requests (people who want to follow me)
+        const { data: pendingRows } = await sb.from('friends').select('follower_id').eq('following_id', userId).eq('status', 'pending');
+        let pendingHtml = '';
+        if (pendingRows && pendingRows.length) {
+          const pendingIds = pendingRows.map(r => r.follower_id);
+          const { data: pendingProfiles } = await sb.from('profiles').select('id, name').in('id', pendingIds);
+          pendingHtml = `<div class="follow-requests-section">
+            <div class="section-label" style="margin-bottom:0.5rem">Follow Requests</div>
+            ${(pendingProfiles || []).map(p => `
+              <div class="follow-request-row">
+                <span class="follow-request-name">${escHtml(p.name || 'Unknown')}</span>
+                <div style="display:flex;gap:0.4rem">
+                  <button class="follow-accept-btn" onclick="acceptFollow('${escHtml(p.id)}','${escHtml(p.name||'')}',this)">Accept</button>
+                  <button class="follow-decline-btn" onclick="declineFollow('${escHtml(p.id)}','${escHtml(p.name||'')}',this)">Decline</button>
+                </div>
+              </div>`).join('')}
+          </div>`;
+        }
+
+        // Get accepted follows only
+        const { data: friendsData, error: e1 } = await sb.from('friends').select('follower_id, following_id').eq('follower_id', userId).eq('status', 'accepted');
         if (e1) throw new Error(e1.message);
 
         const followingIds = (friendsData || []).map(f => f.following_id);
@@ -2038,7 +2058,7 @@
         // Book clubs section
         html += await loadBookClubsSection();
 
-        container.innerHTML = html;
+        container.innerHTML = pendingHtml + html;
       } catch (err) {
         container.innerHTML = `<div class="empty-state"><h3>Error loading friends</h3><p>${escHtml(err.message)}</p></div>`;
       }
@@ -2076,15 +2096,45 @@
     }
 
 
-    async function disconnectUser(friendId, name) {
-      if (!confirm(`Remove ${name} as a friend?`)) return;
+    async function acceptFollow(followerId, name, btn) {
+      btn.disabled = true;
       try {
         const sb = getSupabase();
         const userId = (await sb.auth.getUser()).data.user.id;
-        // Remove both directions
+        // Mark their request as accepted
+        await sb.from('friends').update({ status: 'accepted' }).eq('follower_id', followerId).eq('following_id', userId);
+        showToast(`You are now following ${name || 'this user'} back? Tap "Follow back" if you want.`);
+        // Ask if they want to follow back
+        const followBack = confirm(`Accept done! Do you want to follow ${name || 'this user'} back so they can see your activity too?`);
+        if (followBack) {
+          const { data: existing } = await sb.from('friends').select('id').eq('follower_id', userId).eq('following_id', followerId).maybeSingle();
+          if (!existing) {
+            await sb.from('friends').insert({ follower_id: userId, following_id: followerId, status: 'accepted' });
+          }
+        }
+        loadFamily();
+      } catch (err) { showToast('Error: ' + err.message); btn.disabled = false; }
+    }
+
+    async function declineFollow(followerId, name, btn) {
+      btn.disabled = true;
+      try {
+        const sb = getSupabase();
+        const userId = (await sb.auth.getUser()).data.user.id;
+        await sb.from('friends').delete().eq('follower_id', followerId).eq('following_id', userId);
+        showToast(`Declined follow request from ${name || 'this user'}`);
+        loadFamily();
+      } catch (err) { showToast('Error: ' + err.message); btn.disabled = false; }
+    }
+
+    async function disconnectUser(friendId, name) {
+      if (!confirm(`Unfollow ${name}?`)) return;
+      try {
+        const sb = getSupabase();
+        const userId = (await sb.auth.getUser()).data.user.id;
+        // Only remove your own follow — doesn't affect their follow of you
         await sb.from('friends').delete().eq('follower_id', userId).eq('following_id', friendId);
-        await sb.from('friends').delete().eq('follower_id', friendId).eq('following_id', userId);
-        showToast(`Removed ${name}`);
+        showToast(`Unfollowed ${name}`);
         loadFamily();
       } catch (err) { showToast('Error: ' + err.message); }
     }
