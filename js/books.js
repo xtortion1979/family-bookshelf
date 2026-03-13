@@ -1,6 +1,24 @@
 // ── Google Books API search ───────────────────────────────────────────────
+const CACHE_HIT_THRESHOLD = 5;
+
 async function searchBooks(query, maxResults = 20) {
   if (!query.trim()) return [];
+
+  // Try Supabase cache first
+  if (typeof getSupabase === 'function') {
+    try {
+      const { data: cached } = await getSupabase()
+        .from('book_cache')
+        .select('google_book_id, title, authors, description, thumbnail, published_date, page_count')
+        .ilike('title', `%${query}%`)
+        .limit(maxResults);
+      if (cached && cached.length >= CACHE_HIT_THRESHOLD) {
+        return cached;
+      }
+    } catch { /* fall through to Google */ }
+  }
+
+  // Fall back to Google Books
   let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${maxResults}&printType=books`;
   if (typeof GOOGLE_BOOKS_API_KEY !== 'undefined' && GOOGLE_BOOKS_API_KEY) {
     url += `&key=${GOOGLE_BOOKS_API_KEY}`;
