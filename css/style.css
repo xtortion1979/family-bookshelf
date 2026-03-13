@@ -932,6 +932,27 @@ body {
   border-radius: 8px;
   flex-shrink: 0;
 }
+.detail-cover-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 90px;
+}
+.detail-cover-edit-btn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.15s;
+}
+.detail-cover-edit-btn:hover { background: rgba(0,0,0,0.8); }
 .detail-meta { flex: 1; padding-top: 0.1rem; }
 .detail-title {
   font-size: 1rem;

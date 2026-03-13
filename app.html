@@ -567,9 +567,10 @@
         const progress = listName === 'purchased' && entry.current_page && entry.total_pages
           ? `<div class="cover-grid-progress" style="width:${Math.min(Math.round(entry.current_page/entry.total_pages*100),100)}%"></div>`
           : '';
+        const gridCover = entry.custom_thumbnail || entry.thumbnail;
         return `<div class="cover-grid-item" data-id="${id}" onclick="openDetail('${id}','${listName}')">
-          ${entry.thumbnail
-            ? `<img src="${escHtml(entry.thumbnail)}" alt="${escHtml(entry.title)}" loading="lazy">`
+          ${gridCover
+            ? `<img src="${escHtml(gridCover)}" alt="${escHtml(entry.title)}" loading="lazy">`
             : `<div class="cover-grid-ph"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg></div>`}
           ${ratingDots}
           ${progress ? `<div class="cover-grid-progress-track">${progress}</div>` : ''}
@@ -1238,6 +1239,37 @@
         input.value = '';
       }
     }
+    async function uploadCustomCover(input, googleBookId, listName) {
+      const file = input.files[0];
+      if (!file) return;
+      showToast('Uploading cover…');
+      try {
+        const resized = await resizeImage(file, 400, 600);
+        const path = `${currentUser.id}/covers/${googleBookId}.jpg`;
+        const { error: upErr } = await getSupabase().storage.from('book-covers').upload(path, resized, { upsert: true, contentType: 'image/jpeg' });
+        if (upErr) throw new Error(upErr.message);
+        const { data: { publicUrl } } = getSupabase().storage.from('book-covers').getPublicUrl(path);
+        const bust = publicUrl + '?t=' + Date.now();
+        const { error: dbErr } = await getSupabase().from('book_lists')
+          .update({ custom_thumbnail: publicUrl })
+          .eq('user_id', currentUser.id)
+          .eq('google_book_id', googleBookId)
+          .eq('list_name', listName);
+        if (dbErr) throw new Error('Image saved but cover not updated: ' + dbErr.message);
+        // Update cache and UI
+        const entry = (listCache[listName] || []).find(e => e.google_book_id === googleBookId);
+        if (entry) entry.custom_thumbnail = publicUrl;
+        const img = document.querySelector('.detail-cover');
+        if (img && img.tagName === 'IMG') img.src = bust;
+        else if (img) { const newImg = document.createElement('img'); newImg.className = 'detail-cover'; newImg.src = bust; img.replaceWith(newImg); }
+        showToast('Cover updated!');
+      } catch (err) {
+        showToast('Error: ' + err.message);
+      } finally {
+        input.value = '';
+      }
+    }
+
     function closeProfile() {
       document.getElementById('profile-menu').classList.remove('open');
       cancelEnroll();
@@ -2416,11 +2448,18 @@
       const tot = entry.total_pages || 0;
       const pct = (cur && tot) ? Math.min(Math.round(cur / tot * 100), 100) : 0;
 
+      const coverSrc = entry.custom_thumbnail || entry.thumbnail;
       document.getElementById('detail-content').innerHTML = `
         <div class="detail-cover-row">
-          ${entry.thumbnail
-            ? `<img class="detail-cover" src="${escHtml(entry.thumbnail)}" alt="Cover">`
-            : `<div class="detail-cover detail-cover-ph"></div>`}
+          <div class="detail-cover-wrap">
+            ${coverSrc
+              ? `<img class="detail-cover" src="${escHtml(coverSrc)}" alt="Cover">`
+              : `<div class="detail-cover detail-cover-ph"></div>`}
+            ${listName ? `<label class="detail-cover-edit-btn" title="Update cover">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5V19.5a.75.75 0 00.75.75h2.25a.75.75 0 00.531-.22l10.5-10.5a.75.75 0 000-1.06l-2.25-2.25a.75.75 0 00-1.06 0L3.22 16.22A.75.75 0 003 16.5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.25 6.75l3 3"/></svg>
+              <input type="file" accept="image/*" style="display:none" onchange="uploadCustomCover(this,'${escHtml(entry.google_book_id)}','${escHtml(listName)}')">
+            </label>` : ''}
+          </div>
           <div class="detail-meta">
             ${info ? `<span class="list-badge ${info.badge}">${info.label}</span>` : ''}
             <div class="detail-title">${escHtml(entry.title)}</div>
