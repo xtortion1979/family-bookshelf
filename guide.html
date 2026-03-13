@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Bookshelf — User Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 11pt;
+      color: #1a1a1a;
+      background: #fff;
+      padding: 0.5in;
+      max-width: 8.5in;
+      margin: 0 auto;
+    }
+
+    /* ── Cover ── */
+    .cover {
+      text-align: center;
+      padding: 1.5rem 0 1rem;
+      border-bottom: 3px solid #1e40af;
+      margin-bottom: 1.5rem;
+    }
+    .cover h1 { font-size: 26pt; color: #1e40af; letter-spacing: -0.5px; }
+    .cover .subtitle { font-size: 12pt; color: #6b7280; margin-top: 0.3rem; }
+    .cover .url {
+      margin-top: 0.6rem;
+      font-size: 10pt;
+      font-family: monospace;
+      color: #1e40af;
+      background: #eff6ff;
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+    }
+
+    /* ── TOC ── */
+    .toc { margin: 0.5rem 0 1rem; }
+    .toc-title { font-size: 11pt; font-weight: bold; color: #1e40af; margin-bottom: 0.4rem; }
+    .toc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.15rem 1.5rem;
+      font-size: 9.5pt;
+    }
+    .toc-grid a { color: #1e40af; text-decoration: none; }
+    .toc-grid a:hover { text-decoration: underline; }
+
+    /* ── Section headings ── */
+    h2 {
+      font-size: 14pt;
+      color: #1e40af;
+      border-bottom: 1.5px solid #bfdbfe;
+      padding-bottom: 0.2rem;
+      margin: 1.4rem 0 0.6rem;
+    }
+    h3 { font-size: 11pt; font-weight: bold; color: #1f2937; margin: 0.8rem 0 0.3rem; }
+
+    p { margin-bottom: 0.4rem; line-height: 1.55; }
+
+    ul, ol { margin: 0.3rem 0 0.5rem 1.3rem; }
+    li { margin-bottom: 0.25rem; line-height: 1.5; }
+
+    /* ── Info boxes ── */
+    .box {
+      border-left: 4px solid #1e40af;
+      background: #eff6ff;
+      padding: 0.5rem 0.75rem;
+      margin: 0.6rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .box.amber { border-color: #d97706; background: #fffbeb; }
+    .box.green  { border-color: #16a34a; background: #f0fdf4; }
+    .box.red    { border-color: #dc2626; background: #fef2f2; }
+    .box.purple { border-color: #7c3aed; background: #f5f3ff; }
+
+    /* ── Step list ── */
+    .steps { list-style: none; margin: 0.3rem 0 0.5rem 0; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      padding: 0.3rem 0 0.3rem 2rem;
+      position: relative;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0; top: 0.3rem;
+      width: 1.3rem; height: 1.3rem;
+      background: #1e40af;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 8pt;
+      font-family: Arial, sans-serif;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Two-column layout ── */
+    .two-col { display: flex; gap: 1.5rem; margin: 0.4rem 0; }
+    .two-col > div { flex: 1; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; font-size: 10pt; }
+    th { background: #1e40af; color: #fff; padding: 0.35rem 0.5rem; text-align: left; }
+    td { padding: 0.3rem 0.5rem; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    tr:nth-child(even) td { background: #f9fafb; }
+
+    /* ── Badge pills ── */
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-size: 8.5pt;
+      font-family: Arial, sans-serif;
+      font-weight: 600;
+    }
+    .badge-blue   { background: #dbeafe; color: #1e40af; }
+    .badge-amber  { background: #fef3c7; color: #92400e; }
+    .badge-green  { background: #dcfce7; color: #166534; }
+    .badge-purple { background: #ede9fe; color: #5b21b6; }
+
+    /* ── Print ── */
+    @media print {
+      body { padding: 0.4in; font-size: 10.5pt; }
+      h2 { page-break-after: avoid; }
+      .no-break { page-break-inside: avoid; }
+      @page { margin: 0.6in; }
+    }
+
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 1rem 0; }
+    code { font-family: monospace; background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 10pt; }
+  </style>
+</head>
+<body>
+
+  <div class="cover">
+    <h1>Family Bookshelf</h1>
+    <div class="subtitle">User Guide &amp; Reference</div>
+    <div class="url">bookshelf.mcbrid3.com</div>
+  </div>
+
+  <!-- ── TABLE OF CONTENTS ── -->
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <div class="toc-grid">
+      <a href="#overview">Overview &amp; Lists</a>
+      <a href="#friends">Friends &amp; Social</a>
+      <a href="#accounts">Accounts &amp; Sign In</a>
+      <a href="#clubs">Book Clubs</a>
+      <a href="#mfa">Two-Factor Auth (MFA)</a>
+      <a href="#stats">Stats Tab</a>
+      <a href="#profile">Profile &amp; Settings</a>
+      <a href="#newreleases">New Releases</a>
+      <a href="#search">Searching for Books</a>
+      <a href="#share">Sharing a Book</a>
+      <a href="#managing">Managing Your Books</a>
+      <a href="#install">Installing on Your Phone</a>
+      <a href="#detail">Book Detail Sheet</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#import">Importing &amp; Exporting</a>
+      <a href="#admin">Technical Reference</a>
+    </div>
+  </div>
+
+  <!-- ── OVERVIEW ── -->
+  <h2 id="overview">What Is This?</h2>
+  <p>Family Bookshelf is a private web app for tracking your reading across three lists, connecting with friends and family, and discovering new books. It works in any browser and can be installed as an app on your phone. Your data is stored securely in the cloud and syncs across all devices.</p>
+
+  <div class="two-col">
+    <div>
+      <div class="box">
+        <strong>To Read</strong> <span class="badge badge-blue">Blue</span><br>
+        Books on your radar that you haven't bought yet.
+      </div>
+      <div class="box amber">
+        <strong>Purchased</strong> <span class="badge badge-amber">Amber</span><br>
+        Books you own and are working through.
+      </div>
+      <div class="box green">
+        <strong>Read</strong> <span class="badge badge-green">Green</span><br>
+        Books you've finished.
+      </div>
+    </div>
+    <div>
+      <div class="box" style="height:100%">
+        <strong>Navigation tabs (bottom of screen)</strong><br><br>
+        <strong>🔍 Search</strong> — find and add books<br>
+        <strong>📚 To Read</strong> — your wishlist<br>
+        <strong>🛒 Purchased</strong> — books you own<br>
+        <strong>✅ Read</strong> — finished books<br>
+        <strong>👥 Friends</strong> — social &amp; activity<br>
+        <strong>📊 Stats</strong> — reading statistics<br>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ACCOUNTS ── -->
+  <h2 id="accounts">Accounts &amp; Sign In</h2>
+
+  <h3>Creating an Account</h3>
+  <ol class="steps">
+    <li>Go to <strong>bookshelf.mcbrid3.com</strong> and tap <strong>Sign Up</strong>.</li>
+    <li>Enter your name, email address, and a password (8+ characters).</li>
+    <li>Tap <strong>Create Account</strong> — you're logged in immediately.</li>
+    <li>A short onboarding walkthrough introduces the main features. Tap through it or skip.</li>
+  </ol>
+  <div class="box red">Each family member needs their own account. Book lists are private — no one sees your lists unless you connect as friends.</div>
+
+  <h3>Signing In</h3>
+  <ol class="steps">
+    <li>Go to the app URL.</li>
+    <li>Enter your email and password, tap <strong>Sign In</strong>.</li>
+    <li>If MFA is enabled, enter the 6-digit code from your authenticator app.</li>
+  </ol>
+
+  <!-- ── MFA ── -->
+  <h2 id="mfa">Two-Factor Authentication (MFA)</h2>
+  <p>MFA requires a time-based code from your phone in addition to your password. Strongly recommended for all accounts.</p>
+
+  <h3>Setting Up MFA</h3>
+  <ol class="steps">
+    <li>Tap your avatar (top-right corner) to open your profile.</li>
+    <li>Find <strong>Two-Factor Auth (MFA)</strong> and tap <strong>Set up</strong>.</li>
+    <li>A QR code appears. Open <strong>Google Authenticator</strong> or <strong>Authy</strong> on your phone.</li>
+    <li>Tap <strong>+</strong> → <strong>Scan QR code</strong>. Scan the code on screen.</li>
+    <li>Enter the 6-digit code shown in your authenticator app, then tap <strong>Confirm &amp; Enable MFA</strong>.</li>
+  </ol>
+  <div class="box amber"><strong>Important:</strong> TOTP codes expire every 30 seconds. If a code is rejected, wait for it to refresh and try the new one.</div>
+
+  <h3>Removing MFA</h3>
+  <p>Open your profile, tap <strong>Remove</strong> next to MFA status, and confirm.</p>
+
+  <!-- ── PROFILE ── -->
+  <h2 id="profile">Profile &amp; Settings</h2>
+  <p>Tap your avatar circle in the top-right corner to open your profile panel.</p>
+
+  <table>
+    <tr><th>Setting</th><th>How to use it</th></tr>
+    <tr><td>Profile photo</td><td>Tap the large avatar circle to upload a photo from your device. It's resized automatically before upload.</td></tr>
+    <tr><td>Display name</td><td>Tap the name field, edit it, then tap outside to save.</td></tr>
+    <tr><td>Friend code</td><td>Your unique 6-character code. Share this with someone so they can connect with you.</td></tr>
+    <tr><td>Dark mode</td><td>Tap the moon/sun icon in the top bar to toggle dark mode. Preference is saved per device.</td></tr>
+    <tr><td>MFA</td><td>Set up or remove two-factor authentication (see section above).</td></tr>
+    <tr><td>Sign out</td><td>Tap <strong>Sign Out</strong> at the bottom of the profile panel.</td></tr>
+  </table>
+
+  <!-- ── SEARCH ── -->
+  <h2 id="search">Searching for Books</h2>
+  <ol class="steps">
+    <li>Tap the <strong>Search</strong> tab at the bottom of the screen.</li>
+    <li>Type a title, author name, or ISBN. Tap the <strong>✕</strong> button inside the field to clear it.</li>
+    <li>Press <strong>Enter</strong> or tap <strong>Search</strong>.</li>
+    <li>Results appear. The app checks its local cache first to reduce API usage; if fewer than 5 matches are cached it falls through to Google Books.</li>
+    <li>Tap a result to open the book detail sheet, or tap <strong>+ Add to list</strong> directly on the card.</li>
+  </ol>
+  <div class="box">Books already in one of your lists show a checkmark next to that list — prevents accidental duplicates.</div>
+
+  <h3>Barcode Scanner</h3>
+  <p>Tap the barcode icon next to the search bar to open the camera scanner. Hold a book's back cover up to the camera. The app reads the ISBN and searches automatically. Requires camera permission.</p>
+
+  <h3>Adding a Book Not Found in Search</h3>
+  <p>If a book can't be found, scroll to the bottom of a list and tap <strong>Add book manually</strong>. Fill in the title, author, page count, description, and optionally upload a cover photo. Manual books are saved to the shared book cache so they can be found in future searches.</p>
+
+  <!-- ── MANAGING ── -->
+  <h2 id="managing">Managing Your Books</h2>
+
+  <h3>View Modes</h3>
+  <p>Each list has three view modes, toggled by the icons in the list header:</p>
+  <ul>
+    <li><strong>List view</strong> — book cards with cover, title, author, and action buttons</li>
+    <li><strong>Cover grid</strong> — compact grid of cover thumbnails</li>
+    <li><strong>Bookshelf spine</strong> — horizontal carousel styled as a bookshelf</li>
+  </ul>
+
+  <h3>Book Detail Sheet</h3>
+  <p>Tap any book cover or title to open the full detail sheet. See the <a href="#detail">Book Detail Sheet</a> section for everything available there.</p>
+
+  <h3>Moving, Removing, Adding</h3>
+  <table>
+    <tr><th>Action</th><th>Where to find it</th></tr>
+    <tr><td>Add book to a list</td><td>Search tab → <strong>+ Add to list</strong> on a result card</td></tr>
+    <tr><td>Move to another list</td><td>Book detail sheet → <strong>Move to…</strong> buttons</td></tr>
+    <tr><td>Remove from list</td><td>Book detail sheet → <strong>Remove from list</strong></td></tr>
+    <tr><td>Undo a removal</td><td>Tap <strong>Undo</strong> in the toast that appears — you have 4 seconds</td></tr>
+    <tr><td>Mark as currently reading</td><td>Book detail sheet (Purchased list) → <strong>Mark as reading</strong></td></tr>
+  </table>
+
+  <!-- ── DETAIL SHEET ── -->
+  <h2 id="detail">Book Detail Sheet</h2>
+  <p>Open by tapping any book cover or title. Everything about a book is in one place here.</p>
+
+  <div class="two-col">
+    <div>
+      <h3>For books in your lists</h3>
+      <ul>
+        <li><strong>Star rating</strong> — tap 1–5 stars</li>
+        <li><strong>Reading progress</strong> — enter current page / total pages (Purchased only)</li>
+        <li><strong>Notes</strong> — free-text note, tap <strong>Save note</strong></li>
+        <li><strong>Series</strong> — series name and book number, auto-detected where possible</li>
+        <li><strong>Update cover</strong> — tap the pencil icon on the cover to upload a custom photo (your change only, doesn't affect other users)</li>
+        <li><strong>Mark as reading</strong> — flags as Currently Reading (Purchased only)</li>
+        <li><strong>Shop for this book</strong> — Google search in a new tab</li>
+        <li><strong>Recommend to friend</strong> — send to a connected friend</li>
+        <li><strong>Share book</strong> — copies a link or opens the native share sheet</li>
+        <li><strong>Move to…</strong> — move to another list</li>
+        <li><strong>Remove from list</strong></li>
+      </ul>
+    </div>
+    <div>
+      <h3>For search results (not yet in a list)</h3>
+      <ul>
+        <li><strong>Description, author, year</strong></li>
+        <li><strong>Add to To Read / Purchased / Read</strong></li>
+        <li><strong>Shop for this book</strong></li>
+        <li><strong>Recommend to friend</strong></li>
+        <li><strong>Share book</strong></li>
+      </ul>
+      <div class="box purple" style="margin-top:0.6rem">
+        <strong>Custom cover:</strong> The pencil icon only appears on books already in one of your lists. Upload any image — it applies only to your account.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SERIES ── -->
+  <h2>Series Tracking</h2>
+  <p>The app can track which series a book belongs to and what number it is in that series.</p>
+  <ul>
+    <li>Open a book's detail sheet. A <strong>Series</strong> section appears below the description.</li>
+    <li>The app attempts to auto-detect the series from the book title (e.g. "Dune (Dune Chronicles, #1)") and from Open Library data.</li>
+    <li>If auto-detection finds something, a toast notification appears. Tap outside the field to save.</li>
+    <li>You can always edit the series name and number manually — tap outside to save.</li>
+    <li>Other books from the same series that are in your library appear at the bottom of the detail sheet.</li>
+  </ul>
+
+  <!-- ── IMPORT/EXPORT ── -->
+  <h2 id="import">Importing &amp; Exporting</h2>
+
+  <h3>Importing from a Spreadsheet</h3>
+  <p>Bulk-add books from a CSV file instead of searching one by one.</p>
+  <ol class="steps">
+    <li>Go to the list you want to import into.</li>
+    <li>Tap the <strong>upload icon</strong> next to the book count badge.</li>
+    <li>Upload a <code>.csv</code> or <code>.txt</code> file, or paste data directly.</li>
+    <li>Your file needs two columns: <code>Book Title</code> and <code>Author</code>.</li>
+    <li>Tap <strong>Import Books</strong>. Progress is shown for each entry.</li>
+  </ol>
+  <div class="box amber">Large imports (50+ books) take a minute or two. The app adds a small delay between lookups to stay within Google Books rate limits. Books that can't be found are still saved with the title/author you provided.</div>
+
+  <h3>Exporting a List</h3>
+  <p>Tap the <strong>download icon</strong> next to the book count badge on any list. A CSV file downloads immediately containing title, author, rating, page count, finish date, and description for every book in that list.</p>
+
+  <!-- ── FRIENDS ── -->
+  <h2 id="friends">Friends &amp; Social</h2>
+  <p>The Friends tab lets you connect with other users, see their reading activity, and exchange recommendations.</p>
+
+  <h3>Connecting with a Friend</h3>
+  <ol class="steps">
+    <li>Ask the other person for their <strong>Friend Code</strong> (found in their profile panel — 6 characters, e.g. <code>AB3XY7</code>).</li>
+    <li>On the Friends tab, tap <strong>Connect with friend</strong> and enter the code.</li>
+    <li>The connection is bidirectional — both users immediately see each other's activity.</li>
+  </ol>
+
+  <h3>What You Can See</h3>
+  <table>
+    <tr><th>Section</th><th>What it shows</th></tr>
+    <tr><td>Friends' Book Lists</td><td>Books your friends have added to their Read, Purchased, and To Read lists</td></tr>
+    <tr><td>Activity Feed</td><td>Recent actions — when a friend adds, moves, or finishes a book</td></tr>
+    <tr><td>Books Friends Loved</td><td>Books rated 4 or 5 stars by your connected friends</td></tr>
+    <tr><td>Recommended for You</td><td>Books friends have specifically recommended to you</td></tr>
+  </table>
+
+  <h3>Recommending a Book</h3>
+  <ol class="steps">
+    <li>Open the book's detail sheet (from your lists or search results).</li>
+    <li>Tap <strong>Recommend to friend</strong>.</li>
+    <li>Pick a friend from the list and optionally add a note.</li>
+    <li>Tap <strong>Send recommendation</strong>.</li>
+  </ol>
+  <p>The recipient sees it in their <strong>Recommended for You</strong> section on the Friends tab with a <strong>New</strong> badge.</p>
+
+  <h3>Disconnecting a Friend</h3>
+  <p>On the Friends tab, tap the <strong>Disconnect</strong> button next to a friend's name. This removes the connection for both users.</p>
+
+  <!-- ── BOOK CLUBS ── -->
+  <h2 id="clubs">Book Clubs</h2>
+  <p>Book clubs let a group read the same book together and track shared progress.</p>
+
+  <h3>Creating a Club</h3>
+  <ol class="steps">
+    <li>On the Friends tab, scroll to <strong>Book Clubs</strong> and tap <strong>Create Club</strong>.</li>
+    <li>Enter a club name and tap <strong>Create</strong>.</li>
+    <li>Your club appears with a join code others can use.</li>
+    <li>Optionally set a <strong>Current Book</strong> — search for a book and select it.</li>
+  </ol>
+
+  <h3>Joining a Club</h3>
+  <ol class="steps">
+    <li>Get the club's join code from the club creator.</li>
+    <li>On the Friends tab, tap <strong>Join Club</strong>, enter the code, and tap <strong>Join</strong>.</li>
+  </ol>
+
+  <!-- ── STATS ── -->
+  <h2 id="stats">Stats Tab</h2>
+  <p>The Stats tab gives you an overview of your reading history and goals.</p>
+  <ul>
+    <li><strong>Library counts</strong> — total books in each list at a glance</li>
+    <li><strong>Currently Reading</strong> — books marked as reading now with progress bars</li>
+    <li><strong>Yearly reading goal</strong> — set a target number of books for the year; a progress bar tracks how close you are</li>
+    <li><strong>Books per year</strong> — bar chart of how many books you finished each year</li>
+    <li><strong>Top authors</strong> — authors who appear most in your Read list</li>
+  </ul>
+
+  <!-- ── NEW RELEASES ── -->
+  <h2 id="newreleases">New Releases</h2>
+  <p>Scroll down on the Search tab to find the <strong>New Releases</strong> section. Tap a genre tab to load recent books in that category: Fiction, Non-Fiction, Mystery, Sci-Fi, Romance, Fantasy, Biography, or Thriller.</p>
+  <p>Results are cached after the first load — switching tabs is instant. Tap any book to open the detail sheet and add it to a list.</p>
+
+  <!-- ── SHARE ── -->
+  <h2 id="share">Sharing a Book</h2>
+  <p>Any book can be shared with anyone — even people who don't have an account yet.</p>
+  <ol class="steps">
+    <li>Open the book's detail sheet.</li>
+    <li>Tap <strong>Share book</strong>.</li>
+    <li>On mobile, the native share sheet opens (Messages, WhatsApp, etc.). On desktop, the link is copied to your clipboard.</li>
+    <li>The recipient opens the link, signs in (or creates an account), and the book detail opens automatically.</li>
+  </ol>
+
+  <!-- ── INSTALL ── -->
+  <h2 id="install">Installing on Your Phone (Home Screen App)</h2>
+  <div class="two-col">
+    <div class="no-break">
+      <h3>iPhone (Safari)</h3>
+      <ol class="steps">
+        <li>Open the app in <strong>Safari</strong> (must be Safari, not Chrome).</li>
+        <li>Tap the <strong>Share</strong> button (box with arrow pointing up).</li>
+        <li>Tap <strong>Add to Home Screen</strong>.</li>
+        <li>Tap <strong>Add</strong>.</li>
+      </ol>
+    </div>
+    <div class="no-break">
+      <h3>Android (Chrome)</h3>
+      <ol class="steps">
+        <li>Open the app in <strong>Chrome</strong>.</li>
+        <li>Tap the three-dot menu (top right).</li>
+        <li>Tap <strong>Add to Home screen</strong>.</li>
+        <li>Tap <strong>Add</strong>.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="box green">Once installed, the app opens full-screen like a native app with no browser address bar.</div>
+
+  <!-- ── TROUBLESHOOTING ── -->
+  <h2 id="troubleshooting">Troubleshooting</h2>
+
+  <table>
+    <tr><th>Problem</th><th>Solution</th></tr>
+    <tr><td>MFA code says "Incorrect"</td><td>TOTP codes are time-sensitive. Make sure your phone's clock is on automatic. Wait for the code to refresh (every 30 seconds) and try the new one.</td></tr>
+    <tr><td>Stuck on "Verifying…" during MFA</td><td>Tap <strong>← Back to sign in</strong>, sign in again with email &amp; password, then try the MFA code again.</td></tr>
+    <tr><td>Book not found in search</td><td>Try title only, or author only. For obscure/self-published books, use <strong>Add book manually</strong>.</td></tr>
+    <tr><td>"Search limit reached"</td><td>The app hit the daily Google Books anonymous quota. It resets at midnight Pacific time. Cached books still work.</td></tr>
+    <tr><td>Friend code "not found"</td><td>Double-check the code — it's case-sensitive. Ask the friend to verify their code from their profile panel.</td></tr>
+    <tr><td>Friend's books not showing</td><td>Make sure the connection is bidirectional — both users should see each other listed. Try disconnecting and reconnecting.</td></tr>
+    <tr><td>Custom cover not appearing</td><td>The pencil icon only appears on books already in your list (not search results). Make sure the book is in a list first.</td></tr>
+    <tr><td>Series not auto-detected</td><td>Auto-detection works on common title patterns like "(Series Name, #1)". For other formats, enter the series name manually.</td></tr>
+    <tr><td>Import shows many failures</td><td>Check column headers are exactly <code>Book Title</code> and <code>Author</code> (row 1). Remove special characters or extra columns.</td></tr>
+    <tr><td>Changes not showing up</td><td>The app may be serving a cached version. Force-close and reopen, or pull down to refresh.</td></tr>
+    <tr><td>Forgot password</td><td>Contact the person managing the Supabase project to reset it manually.</td></tr>
+  </table>
+
+  <!-- ── ADMIN ── -->
+  <h2 id="admin">Technical Reference (Admin)</h2>
+
+  <table>
+    <tr><th>Item</th><th>Details</th></tr>
+    <tr><td>App URL</td><td>bookshelf.mcbrid3.com</td></tr>
+    <tr><td>Source code</td><td>github.com/xtortion1979/family-bookshelf</td></tr>
+    <tr><td>Database</td><td>Supabase — project ID: jlcvznpnhxhqytopjiud</td></tr>
+    <tr><td>Supabase dashboard</td><td>supabase.com → sign in → select project</td></tr>
+    <tr><td>Deploy process</td><td>Push to <code>main</code> branch → GitHub Pages deploys automatically in 2–5 minutes</td></tr>
+    <tr><td>Config file</td><td><code>js/config.js</code> — Supabase URL and anon key (public by design)</td></tr>
+    <tr><td>Key tables</td><td><code>book_lists</code>, <code>profiles</code>, <code>friends</code>, <code>book_cache</code>, <code>recommendations</code>, <code>activity</code>, <code>book_clubs</code>, <code>book_club_members</code></td></tr>
+    <tr><td>Book cache</td><td><code>book_cache</code> — shared table of book metadata; grows as users search, reducing Google Books API calls over time</td></tr>
+    <tr><td>File storage</td><td>Supabase Storage — <code>avatars</code> bucket (profile photos), <code>book-covers</code> bucket (custom covers and manual book images)</td></tr>
+    <tr><td>Row Level Security</td><td>Enabled on all user data tables — users can only read/write their own rows</td></tr>
+    <tr><td>MFA type</td><td>TOTP (compatible with Google Authenticator, Authy, 1Password)</td></tr>
+    <tr><td>Book data source</td><td>Google Books API (anonymous), with Supabase <code>book_cache</code> as primary source to reduce API calls</td></tr>
+    <tr><td>Series fallback</td><td>Open Library API (<code>openlibrary.org/search.json</code>) for series metadata not found in title patterns</td></tr>
+  </table>
+
+  <hr>
+  <p style="text-align:center;font-size:9pt;color:#9ca3af;margin-top:0.5rem">Family Bookshelf &mdash; User Guide &mdash; bookshelf.mcbrid3.com</p>
+
+</body>
+</html>
