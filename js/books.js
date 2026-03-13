@@ -166,20 +166,20 @@ async function removeFamilyConnection(otherUserId) {
     .eq('user_id', otherUserId).eq('connected_user_id', userId);
 }
 
-async function getAllFamilyBooks() {
-  const { data, error } = await getSupabase()
-    .from('book_lists')
-    .select('user_id, google_book_id, title, authors, thumbnail, list_name, rating, finished_at')
-    .order('title', { ascending: true });
-  if (error) throw error;
-  return data || [];
-}
-
-async function getAllProfiles() {
+async function getConnectedFriendProfiles() {
+  const userId = (await getSupabase().auth.getUser()).data.user.id;
+  const { data: friendRows, error: fErr } = await getSupabase()
+    .from('friends')
+    .select('following_id')
+    .eq('follower_id', userId);
+  if (fErr) throw new Error(fErr.message);
+  const ids = (friendRows || []).map(r => r.following_id);
+  if (!ids.length) return [];
   const { data, error } = await getSupabase()
     .from('profiles')
-    .select('id, name');
-  if (error) throw error;
+    .select('id, name')
+    .in('id', ids);
+  if (error) throw new Error(error.message);
   return data || [];
 }
 

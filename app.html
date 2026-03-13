@@ -631,11 +631,11 @@
       document.getElementById('profile-name').value        = name;
       document.getElementById('profile-email').textContent = currentUser.email;
       if (profileData?.avatar_url) {
-        const avatarImg = new Image();
-        avatarImg.onload = () => {
-          document.getElementById('avatar-btn').innerHTML = `<img src="${profileData.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-        };
-        avatarImg.onerror = () => console.warn('Avatar image failed to load:', profileData.avatar_url);
+        const topBtn = document.getElementById('avatar-btn');
+        const avatarImg = document.createElement('img');
+        avatarImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+        avatarImg.onload = () => { topBtn.innerHTML = ''; topBtn.appendChild(avatarImg); };
+        avatarImg.onerror = () => console.warn('Avatar image failed to load');
         avatarImg.src = profileData.avatar_url;
       }
 
@@ -1224,10 +1224,21 @@
       const topBtn = document.getElementById('avatar-btn');
       const initial = (name || '?').charAt(0).toUpperCase();
       if (url) {
-        large.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.innerHTML='<span id=profile-avatar-initial>${initial}</span>'">`;
-        topBtn.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='${initial}'">`;
+        // Use DOM methods (not innerHTML) to avoid XSS from attacker-controlled URLs
+        const mkImg = (onErr) => {
+          const img = document.createElement('img');
+          img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+          img.addEventListener('error', onErr);
+          img.src = url;
+          return img;
+        };
+        large.innerHTML = '';
+        large.appendChild(mkImg(() => { large.innerHTML = `<span id="profile-avatar-initial">${escHtml(initial)}</span>`; }));
+        topBtn.innerHTML = '';
+        topBtn.appendChild(mkImg(() => { topBtn.textContent = initial; }));
       } else {
-        document.getElementById('profile-avatar-initial').textContent = initial;
+        const initEl = document.getElementById('profile-avatar-initial');
+        if (initEl) initEl.textContent = initial;
         topBtn.textContent = initial;
       }
     }
@@ -1681,8 +1692,7 @@
       document.getElementById('recommend-modal').classList.add('open');
 
       try {
-        const profiles = await getAllProfiles();
-        const friends = profiles.filter(p => p.id !== currentUser.id);
+        const friends = await getConnectedFriendProfiles();
         if (!friends.length) {
           listEl.innerHTML = `<div style="text-align:center;padding:1rem 0;color:var(--gray-400);font-size:.875rem">
             <div style="font-size:1.5rem;margin-bottom:.4rem">👥</div>
