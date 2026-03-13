@@ -2101,17 +2101,18 @@
       try {
         const sb = getSupabase();
         const userId = (await sb.auth.getUser()).data.user.id;
-        // Mark their request as accepted
-        await sb.from('friends').update({ status: 'accepted' }).eq('follower_id', followerId).eq('following_id', userId);
-        showToast(`You are now following ${name || 'this user'} back? Tap "Follow back" if you want.`);
+        // Delete the pending row then re-insert as accepted (avoids needing UPDATE permission via RLS)
+        await sb.from('friends').delete().eq('follower_id', followerId).eq('following_id', userId);
+        await sb.from('friends').insert({ follower_id: followerId, following_id: userId, status: 'accepted' });
         // Ask if they want to follow back
-        const followBack = confirm(`Accept done! Do you want to follow ${name || 'this user'} back so they can see your activity too?`);
+        const followBack = confirm(`${name || 'This user'} can now see your activity. Do you want to follow them back so you can see theirs too?`);
         if (followBack) {
           const { data: existing } = await sb.from('friends').select('id').eq('follower_id', userId).eq('following_id', followerId).maybeSingle();
           if (!existing) {
             await sb.from('friends').insert({ follower_id: userId, following_id: followerId, status: 'accepted' });
           }
         }
+        showToast(`Accepted follow request from ${name || 'this user'}`);
         loadFamily();
       } catch (err) { showToast('Error: ' + err.message); btn.disabled = false; }
     }
