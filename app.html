@@ -34,8 +34,14 @@
       <h2 class="search-hero-title">Find your next book</h2>
       <p class="search-hero-sub">Search millions of titles, then save them to your lists</p>
       <div class="search-bar">
-        <input type="search" id="search-input" placeholder="Title, author, ISBN…" autocomplete="off"
-          onkeydown="if(event.key==='Enter') doSearch()">
+        <div class="search-input-wrap">
+          <input type="search" id="search-input" placeholder="Title, author, ISBN…" autocomplete="off"
+            onkeydown="if(event.key==='Enter') doSearch()"
+            oninput="document.getElementById('search-clear-btn').style.display=this.value?'flex':'none'">
+          <button id="search-clear-btn" class="search-clear-btn" style="display:none" onclick="document.getElementById('search-input').value='';document.getElementById('search-clear-btn').style.display='none';document.getElementById('search-results').innerHTML='';document.getElementById('search-input').focus()" title="Clear">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
         <button onclick="doSearch()">Search</button>
         <button class="scan-btn" onclick="openScanner()" title="Scan barcode">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12v.01M12 4h.01M4 4h4v4H4V4zm12 0h4v4h-4V4zM4 16h4v4H4v-4z"/></svg>
