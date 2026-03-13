@@ -79,6 +79,9 @@
 [data-theme="dark"] .detail-actions     { border-color: #334155; }
 [data-theme="dark"] .family-member      { background: #1e293b; border-color: #334155; }
 [data-theme="dark"] .sort-dropdown      { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+[data-theme="dark"] .dropdown           { background: #1e293b; border-color: #334155; }
+[data-theme="dark"] .dropdown-item      { color: #f1f5f9; }
+[data-theme="dark"] .dropdown-item:hover { background: #334155; }
 [data-theme="dark"] .search-hero .search-bar button { background: #1e293b; }
 [data-theme="dark"] .toast              { background: #1e293b; color: #f1f5f9; }
 [data-theme="dark"] .my-code-card       { background: #1e293b; border-color: #334155; }
